@@ -33,7 +33,15 @@ function forget() {
 /** Verifies a token against the hub and starts a session. Throws with a readable message on failure. */
 export async function login({ hubUrl, token, remember = false }) {
   const base = normalizeUrl(hubUrl);
-  const candidate = createApi({ base, token: token.trim(), onUnauthorized: () => signOut('Your session was rejected by the hub. Sign in again.') });
+  const candidate = createApi({
+    base,
+    token: token.trim(),
+    // Only a client that became the active session can end it. A rejected sign-in attempt is reported
+    // to the sign-in form by login() throwing, and must not touch an existing session or add a banner.
+    onUnauthorized: () => {
+      if (api === candidate) signOut('Your session was rejected by the hub. Sign in again.');
+    },
+  });
   const hub = await candidate.hub();
 
   let admin = false;

@@ -49,10 +49,13 @@ Never run it against a hub that monitors real systems.
 npm run build        # writes dist/
 ```
 
-`dist/` is plain static files with relative paths, so it works from any folder or sub-path. Two ways to host it:
+`dist/` is plain static files with relative paths, so it works from any folder or sub-path. Three ways to host it:
 
-1. **Behind the same address as the hub** (for example a load balancer that routes `/api` to the hub and everything else to a static file server). No extra setup: leave "Hub URL" empty at sign-in.
-2. **On its own host.** Enter the hub's address under "Hub address" at sign-in. The hub must then allow this site's origin (CORS); that setting is not in the hub yet.
+1. **Let the hub serve it** (simplest, one address for everything). Start the hub with `--svcmon.ui-dir=/path/to/service-monitor-ui/dist` (or `svcmon.ui-dir` in its `application.yml`), open the hub's address, and leave "Hub address" empty at sign-in.
+2. **Behind the same address as the hub** through a load balancer that routes `/api` to the hub and everything else to a static file server. No hub setting is needed; leave "Hub address" empty at sign-in.
+3. **On its own host.** Enter the hub's address under "Hub address" at sign-in, and list this site's address in the hub's `svcmon.cors-allowed-origins` setting. It takes exact origins such as `https://dashboard.example.com` (no path, no trailing slash; `*` is refused and stops the hub from starting). CORS is off until you set it.
+
+The hub's setting names are described in its [README](https://github.com/primelogiclabio/service-monitor#host-the-web-ui).
 
 ## Layout
 
