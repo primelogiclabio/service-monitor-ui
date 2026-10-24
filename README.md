@@ -10,6 +10,8 @@ The web dashboard for [service-monitor](https://github.com/primelogiclabio/servi
 - **Add server:** creates a one-time enrollment token and shows the install command for Windows and for Linux/macOS.
 - **Tokens:** create and revoke API tokens.
 
+**Live switch** (top right): by default the page asks the hub for the status every 5 seconds. Switch Live on and the hub pushes changes over a WebSocket as they happen instead, with no refresh delay. It needs a hub that has the live view (see its README) and a load balancer that passes WebSocket upgrades. It switches itself off after 5 minutes without activity (mouse, keyboard, touch or scroll while the tab is shown), and goes back to normal refreshing on its own if the connection drops, the hub refuses it or is full, or the hub is too old to have it, so the dashboard never depends on it. The token is sent in the connection's first message, never in its address.
+
 Status is always shown with a shape and a word as well as a colour. Light and dark themes follow the system setting and can be overridden. The layout works on a phone.
 
 ## Sign-in
