@@ -12,6 +12,7 @@
   import Checks from './views/Checks.svelte';
   import Enroll from './views/Enroll.svelte';
   import Tokens from './views/Tokens.svelte';
+  import Help from './views/Help.svelte';
   import Toasts from './components/Toasts.svelte';
 
   let ready = $state(false);
@@ -41,6 +42,7 @@
     { name: 'checks', href: '#/checks', label: 'Checks' },
     { name: 'enroll', href: '#/enroll', label: 'Add server' },
     { name: 'tokens', href: '#/tokens', label: 'Tokens' },
+    { name: 'help', href: '#/help', label: 'Help' },
   ]);
   const current = $derived(route.name === 'server' ? 'overview' : route.name);
   const themeLabel = $derived({ system: 'Theme: auto', light: 'Theme: light', dark: 'Theme: dark' }[theme.pref]);
@@ -95,6 +97,8 @@
       <Enroll />
     {:else if route.name === 'tokens'}
       <Tokens />
+    {:else if route.name === 'help'}
+      <Help />
     {:else}
       <Overview />
     {/if}

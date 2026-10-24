@@ -13,6 +13,8 @@ export function parseHash(hash) {
       return { name: 'enroll', params: {} };
     case 'tokens':
       return { name: 'tokens', params: {} };
+    case 'help':
+      return { name: 'help', params: {} };
     default:
       return { name: 'overview', params: {} };
   }

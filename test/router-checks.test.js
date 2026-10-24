@@ -9,6 +9,7 @@ describe('parseHash', () => {
     expect(parseHash('#/checks')).toEqual({ name: 'checks', params: {} });
     expect(parseHash('#/enroll')).toEqual({ name: 'enroll', params: {} });
     expect(parseHash('#/tokens')).toEqual({ name: 'tokens', params: {} });
+    expect(parseHash('#/help')).toEqual({ name: 'help', params: {} });
   });
   it('reads the server id and decodes it', () => {
     expect(parseHash('#/server/abc-123')).toEqual({ name: 'server', params: { id: 'abc-123' } });
