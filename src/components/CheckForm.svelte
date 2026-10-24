@@ -1,6 +1,7 @@
 <script>
   import { AGENT_ONLY_TYPES, CHECK_TYPES } from '../lib/format.js';
   import { TARGET_HELP, defaultThresholds } from '../lib/checks.js';
+  import Help from './Help.svelte';
 
   let { servers = [], initial = null, presetServerId = '', busy = false, error = '', onsubmit, oncancel } = $props();
 
@@ -105,6 +106,7 @@
 </script>
 
 <form onsubmit={submit} class="stack" novalidate>
+  {#if !edit}<Help topic="addCheck" />{/if}
   <div class="form-grid">
     <div class="field">
       <label for="cf-type">Type</label>
