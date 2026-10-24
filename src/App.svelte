@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { auth, restore, signOut } from './lib/auth.svelte.js';
   import { status, startPolling, stopPolling } from './lib/status.svelte.js';
+  import { live, toggleLive, stopLive } from './lib/live.svelte.js';
   import { route, startRouter } from './lib/route.svelte.js';
   import { theme, initTheme, cycleTheme } from './lib/theme.svelte.js';
   import { ago } from './lib/format.js';
@@ -24,11 +25,14 @@
     return () => clearInterval(t);
   });
 
-  // Poll the hub while signed in.
+  // Poll the hub while signed in. Live mode, if switched on, takes over from polling until it ends.
   $effect(() => {
     if (auth.token) {
       startPolling();
-      return stopPolling;
+      return () => {
+        stopLive();
+        stopPolling();
+      };
     }
   });
 
@@ -40,6 +44,7 @@
   ]);
   const current = $derived(route.name === 'server' ? 'overview' : route.name);
   const themeLabel = $derived({ system: 'Theme: auto', light: 'Theme: light', dark: 'Theme: dark' }[theme.pref]);
+  const liveLabel = $derived({ off: 'Live: off', connecting: 'Live: connecting…', on: 'Live: on' }[live.state]);
 </script>
 
 {#if !ready}
@@ -56,6 +61,16 @@
         {/each}
       </nav>
       <div class="row">
+        <button
+          class="btn small ghost live-toggle"
+          class:on={live.state === 'on'}
+          type="button"
+          aria-pressed={live.state !== 'off'}
+          title="The hub pushes changes as they happen instead of the page refreshing every few seconds. Switches itself off after 5 minutes without activity."
+          onclick={toggleLive}
+        >
+          <span class="live-dot" aria-hidden="true"></span>{liveLabel}
+        </button>
         <button class="btn small ghost" type="button" onclick={cycleTheme}>{themeLabel}</button>
         <button class="btn small" type="button" onclick={() => signOut()}>Sign out</button>
       </div>
@@ -91,7 +106,9 @@
         Hub {auth.hub?.version ?? ''} · {auth.admin ? 'admin access' : 'read-only access'}
         {#if auth.hubUrl}· {auth.hubUrl}{/if}
       </span>
-      <span>{status.updatedAt ? `Updated ${ago(status.updatedAt, now)}` : ''}</span>
+      <span>
+        {#if live.state === 'on'}Live{:else if status.updatedAt}Updated {ago(status.updatedAt, now)}{/if}
+      </span>
     </div>
   </footer>
 {/if}

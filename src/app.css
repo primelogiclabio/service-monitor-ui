@@ -311,6 +311,41 @@ footer.site {
   background: transparent;
 }
 
+/* Live mode switch: the dot is grey when off, hollow while connecting and green (pulsing) when pushes arrive. */
+.live-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--unknown);
+}
+.live-toggle[aria-pressed='true'] .live-dot {
+  background: transparent;
+  box-shadow: inset 0 0 0 2px var(--good);
+}
+.live-toggle.on .live-dot {
+  background: var(--good);
+  animation: live-pulse 2s ease-out infinite;
+}
+@keyframes live-pulse {
+  0% {
+    box-shadow: 0 0 0 0 var(--good);
+  }
+  70%,
+  100% {
+    box-shadow: 0 0 0 6px transparent;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .live-toggle.on .live-dot {
+    animation: none;
+  }
+}
+
 .field {
   display: flex;
   flex-direction: column;
