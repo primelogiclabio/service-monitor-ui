@@ -4,6 +4,7 @@
   import { notify } from '../lib/notify.svelte.js';
   import { fmtDateTime } from '../lib/format.js';
   import ConfirmDialog from '../components/ConfirmDialog.svelte';
+  import Tip from '../components/Tip.svelte';
 
   let tokens = $state([]);
   let loaded = $state(false);
@@ -79,11 +80,11 @@
       <h2>Create a token</h2>
       <div class="form-grid">
         <div class="field">
-          <label for="t-name">What it is for</label>
+          <div class="label-row"><label for="t-name">What it is for</label><Tip field="token.name" /></div>
           <input id="t-name" type="text" bind:value={name} placeholder="ops laptop" autocomplete="off" />
         </div>
         <div class="field">
-          <label for="t-scope">Access</label>
+          <div class="label-row"><label for="t-scope">Access</label><Tip field="token.scope" /></div>
           <select id="t-scope" bind:value={scope}>
             <option value="READ">Read only</option>
             <option value="ADMIN">Admin (can change everything)</option>
@@ -120,7 +121,7 @@
                   <td class="hide-sm">{fmtDateTime(t.createdAt)}</td>
                   <td class="hide-sm">{t.expiresAt ? fmtDateTime(t.expiresAt) : '—'}</td>
                   <td>{t.usedAt ? fmtDateTime(t.usedAt) : '—'}</td>
-                  <td class="num"><button class="btn small danger" type="button" onclick={() => (revoking = t)}>Revoke</button></td>
+                  <td class="num"><button class="btn small danger" type="button" title="Stop this token working. Anything using it is locked out; this cannot be undone." onclick={() => (revoking = t)}>Revoke</button></td>
                 </tr>
               {/each}
             </tbody>

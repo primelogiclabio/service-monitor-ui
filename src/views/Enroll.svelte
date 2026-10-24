@@ -2,7 +2,8 @@
   import { auth, getApi } from '../lib/auth.svelte.js';
   import { TTL_CHOICES, THIS_SERVER_TTL_MINUTES, guessPlatform, pageIsOnTheHub, thisServerHub } from '../lib/enroll.js';
   import AgentCommands from '../components/AgentCommands.svelte';
-  import Help from '../components/Help.svelte';
+  import WithHelp from '../components/WithHelp.svelte';
+  import Tip from '../components/Tip.svelte';
 
   // The page's own address: where the hub is if the dashboard is served by it.
   const pageHub = auth.hubUrl || location.origin;
@@ -47,6 +48,7 @@
   }
 </script>
 
+<WithHelp topic="addServer">
 <div class="stack-lg" style="max-width: 820px">
   <div>
     <h1 style="font-size: 1.75rem">Add a server</h1>
@@ -55,8 +57,6 @@
       Nothing is monitored until you add checks for it.
     </p>
   </div>
-
-  <Help topic="addServer" />
 
   {#if !auth.admin}
     <div class="banner warn">Creating enrollment tokens needs an ADMIN token. You are signed in with a read-only token.</div>
@@ -85,18 +85,15 @@
       <h2>Another server: 1. Create a one-time token</h2>
       <div class="form-grid">
         <div class="field">
-          <label for="e-label">Label (optional)</label>
+          <div class="label-row"><label for="e-label">Label (optional)</label><Tip field="enroll.label" /></div>
           <input id="e-label" type="text" bind:value={label} placeholder="web03" autocomplete="off" />
         </div>
         <div class="field">
-          <label for="e-ttl">Valid for</label>
+          <div class="label-row"><label for="e-ttl">Valid for</label><Tip field="enroll.ttl" /></div>
           <select id="e-ttl" bind:value={ttl}>
             {#each TTL_CHOICES as c (c.minutes)}<option value={c.minutes}>{c.label}</option>{/each}
           </select>
-          <span class="hint">
-            The token works once. It expires so one that is lost or forgotten cannot be used later; choose longer only if
-            someone will run the command later.
-          </span>
+          <span class="hint">The token works once, then it is spent.</span>
         </div>
       </div>
       {#if error}<p class="form-error" role="alert">{error}</p>{/if}
@@ -138,3 +135,4 @@
     </section>
   {/if}
 </div>
+</WithHelp>

@@ -54,6 +54,128 @@ export const HELP = {
   },
 };
 
+/**
+ * One short explanation per form field, shown by the info icon (see Tip.svelte) next to the field's label.
+ * The key is used as <Tip field="..." />; a test keeps every key used and every use defined.
+ * @type {Record<string, { label: string, text: string }>}
+ */
+export const FIELD_HELP = {
+  'check.type': {
+    label: 'Type',
+    text: "What to test. HTTP, TCP and PING can run from the hub; SERVICE, CPU, MEMORY and DISK always run on a server's agent.",
+  },
+  'check.name': { label: 'Name', text: 'How the check is listed on the dashboard and named in alerts.' },
+  'check.server': {
+    label: 'Server',
+    text: 'The server this check belongs to. Required for SERVICE, CPU, MEMORY and DISK checks and whenever the check runs from an agent. Leave it empty for a check the hub runs on its own, such as a website.',
+  },
+  'check.runFrom': {
+    label: 'Runs from',
+    text: "Where the test starts. The hub tests from its own network; the server's agent tests from that server's side, which shows whether the server itself can reach something.",
+  },
+  'check.expectStatus': {
+    label: 'Accepted status codes',
+    text: 'The HTTP status codes that count as UP, for example `200-299` or `200,301-302`. Empty means 200-299.',
+  },
+  'check.keyword': {
+    label: 'Body must contain',
+    text: 'If set, the page must contain this text or the check is DOWN. Catches a page that answers 200 while showing an error.',
+  },
+  'check.certWarnDays': {
+    label: 'Certificate warning',
+    text: "Turns the check to WARN when the site's certificate expires within this many days. Empty means 14.",
+  },
+  'check.followRedirects': {
+    label: 'Follow redirects',
+    text: 'On: a redirect is followed and the final page is judged. Off: the redirect response itself is judged, so a 301 is only UP if you accept it above.',
+  },
+  'check.ignoreTls': {
+    label: 'Accept any TLS certificate',
+    text: 'Skips certificate and host name validation. Only for internal sites with a self-signed certificate; it also hides a genuine certificate problem.',
+  },
+  'check.warn': {
+    label: 'Warning at',
+    text: 'Percent used at which the check turns WARN. Empty uses the default: 85 for CPU and memory, 80 for disk.',
+  },
+  'check.crit': {
+    label: 'Down at',
+    text: 'Percent used at which the check is DOWN. Empty uses the default: 95 for CPU and memory, 90 for disk.',
+  },
+  'check.interval': {
+    label: 'Every',
+    text: 'How often the check runs, in seconds (5 or more). Shorter means faster detection, more load and more history.',
+  },
+  'check.timeout': { label: 'Timeout', text: 'How long to wait for an answer, in milliseconds, before the attempt counts as failed.' },
+  'check.failures': {
+    label: 'Failures before down',
+    text: 'How many failed attempts in a row it takes to report DOWN. 1 reports at once; 2 or 3 avoids an alert for a single dropped packet.',
+  },
+  'check.enabled': {
+    label: 'Enabled',
+    text: 'A disabled check keeps its history but does not run and does not count in the status.',
+  },
+  'enroll.label': {
+    label: 'Label',
+    text: 'A note on the token, shown on the Tokens page. It does not name the server: the server uses its own host name unless you add `--name` to the command.',
+  },
+  'enroll.ttl': {
+    label: 'Valid for',
+    text: 'The token works once and then expires, so one that is lost or forgotten cannot be used later. Choose longer only if someone will run the command later.',
+  },
+  'enroll.hub': {
+    label: 'Hub address',
+    text: "How the server reaches the hub, from the server's side of the network. Use the hub's internal address if this page is reached through a load balancer. The server only connects out, so it needs no open ports.",
+  },
+  'enroll.cluster': {
+    label: 'Cluster',
+    text: 'A group name such as prod or staging; the Overview groups servers by it. Optional, and it can be changed later with Rename or move.',
+  },
+  'token.name': {
+    label: 'What it is for',
+    text: 'A note to help you decide later which token to revoke, for example the person, script or screen that uses it.',
+  },
+  'token.scope': {
+    label: 'Access',
+    text: 'Read only can look at everything but change nothing. Admin can also add and change checks and servers, manage alert channels and create tokens.',
+  },
+  'login.token': {
+    label: 'API token',
+    text: 'The hub prints an admin token once, when its database is first created. An admin can make more on the Tokens page or with `svcmon token create`.',
+  },
+  'login.hub': {
+    label: 'Hub address',
+    text: "Leave empty when the hub serves this page. Otherwise enter the hub's address; the hub must list this site in its `cors-allowed-origins` setting.",
+  },
+  'server.cluster': {
+    label: 'Cluster',
+    text: 'A group name such as prod or staging; the Overview groups servers by it. Leave empty for none.',
+  },
+};
+
+/** The explanation of one check type from the Add check help, for the info icon beside the target field. */
+export function typeHelp(type) {
+  return HELP.addCheck.fields.find((f) => f.name.split(', ').includes(type))?.text ?? '';
+}
+
+const helpKey = (topic) => `sm-help-${topic}`;
+
+/** Whether the help panel for a topic was left open. Storage can be missing or throw, so it just means closed. */
+export function loadHelpOpen(topic, storage) {
+  try {
+    return storage?.getItem(helpKey(topic)) === '1';
+  } catch {
+    return false;
+  }
+}
+
+export function saveHelpOpen(topic, open, storage) {
+  try {
+    storage?.setItem(helpKey(topic), open ? '1' : '0');
+  } catch {
+    // the panel still works; it just will not be remembered
+  }
+}
+
 /** Splits "a `b` c" into text and code pieces, for rendering without injecting HTML. */
 export function parts(text) {
   return text.split('`').map((piece, i) => ({ text: piece, code: i % 2 === 1 })).filter((p) => p.text !== '');

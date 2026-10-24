@@ -124,11 +124,11 @@
     {#if auth.admin}
       <div class="row">
         {#if check.runFrom === 'HUB'}
-          <button class="btn small" type="button" onclick={runNow} disabled={busy}>Run now</button>
+          <button class="btn small" type="button" title="Run this check now and record the result" onclick={runNow} disabled={busy}>Run now</button>
         {/if}
-        <button class="btn small" type="button" onclick={toggleEnabled} disabled={busy}>{check.enabled ? 'Disable' : 'Enable'}</button>
-        <button class="btn small" type="button" onclick={() => { formError = ''; editing = true; }} disabled={busy || !def}>Edit</button>
-        <button class="btn small danger" type="button" onclick={() => (deleting = true)} disabled={busy}>Delete</button>
+        <button class="btn small" type="button" title={check.enabled ? 'Stop running this check; its history is kept' : 'Start running this check again'} onclick={toggleEnabled} disabled={busy}>{check.enabled ? 'Disable' : 'Enable'}</button>
+        <button class="btn small" type="button" title="Change this check's settings" onclick={() => { formError = ''; editing = true; }} disabled={busy || !def}>Edit</button>
+        <button class="btn small danger" type="button" title="Delete this check and its history" onclick={() => (deleting = true)} disabled={busy}>Delete</button>
       </div>
     {/if}
   </div>

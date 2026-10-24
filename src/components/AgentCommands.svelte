@@ -2,6 +2,7 @@
   import { notify } from '../lib/notify.svelte.js';
   import { fmtDateTime } from '../lib/format.js';
   import { installCommands } from '../lib/enroll.js';
+  import Tip from './Tip.svelte';
 
   /** The install command for a freshly issued enrollment token, for the platforms in `order` (likelier first). */
   let { issued, hub: initialHub = '', order = ['windows', 'unix'], idPrefix = 'ac' } = $props();
@@ -30,12 +31,12 @@
 </div>
 <div class="form-grid">
   <div class="field">
-    <label for="{idPrefix}-hub">Hub address the server will use</label>
+    <div class="label-row"><label for="{idPrefix}-hub">Hub address the server will use</label><Tip field="enroll.hub" /></div>
     <input id="{idPrefix}-hub" type="text" bind:value={hub} autocomplete="off" spellcheck="false" />
     <span class="hint">Use the hub's internal address if this page is reached through a load balancer.</span>
   </div>
   <div class="field">
-    <label for="{idPrefix}-cluster">Cluster (optional)</label>
+    <div class="label-row"><label for="{idPrefix}-cluster">Cluster (optional)</label><Tip field="enroll.cluster" /></div>
     <input id="{idPrefix}-cluster" type="text" bind:value={cluster} placeholder="prod" autocomplete="off" />
   </div>
 </div>

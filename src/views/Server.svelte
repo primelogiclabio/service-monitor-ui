@@ -8,6 +8,7 @@
   import CheckForm from '../components/CheckForm.svelte';
   import ConfirmDialog from '../components/ConfirmDialog.svelte';
   import Modal from '../components/Modal.svelte';
+  import Tip from '../components/Tip.svelte';
 
   let { id } = $props();
 
@@ -108,9 +109,9 @@
         </div>
         {#if auth.admin}
           <div class="row">
-            <button class="btn" type="button" onclick={() => { formError = ''; adding = true; }}>Add check</button>
-            <button class="btn" type="button" onclick={startRename}>Rename or move</button>
-            <button class="btn danger" type="button" onclick={() => (deleting = true)}>Remove</button>
+            <button class="btn" type="button" title="Add a check for this server" onclick={() => { formError = ''; adding = true; }}>Add check</button>
+            <button class="btn" type="button" title="Change the server's name or move it to another cluster" onclick={startRename}>Rename or move</button>
+            <button class="btn danger" type="button" title="Remove the server from the hub, with its checks and history, and revoke its agent's credential. The agent keeps running on the machine until you uninstall it." onclick={() => (deleting = true)}>Remove</button>
           </div>
         {/if}
       </div>
@@ -163,7 +164,7 @@
           <input id="sv-name" type="text" bind:value={newName} />
         </div>
         <div class="field">
-          <label for="sv-cluster">Cluster</label>
+          <div class="label-row"><label for="sv-cluster">Cluster</label><Tip field="server.cluster" /></div>
           <input id="sv-cluster" type="text" bind:value={newCluster} placeholder="default" />
           <span class="hint">Servers with the same cluster name are grouped together.</span>
         </div>
