@@ -1,6 +1,7 @@
 <script>
   import { auth, login } from '../lib/auth.svelte.js';
   import { theme, cycleTheme } from '../lib/theme.svelte.js';
+  import Tip from '../components/Tip.svelte';
 
   let token = $state('');
   let hubUrl = $state('');
@@ -37,7 +38,7 @@
 
     <form class="stack" onsubmit={submit} novalidate>
       <div class="field">
-        <label for="token">API token</label>
+        <div class="label-row"><label for="token">API token</label><Tip field="login.token" /></div>
         <input id="token" type="password" bind:value={token} autocomplete="off" spellcheck="false" placeholder="svm_a_…" />
         <span class="hint">An ADMIN token can change things; a READ token only views. The hub prints an admin token on first start, and <code>svcmon token create</code> makes more.</span>
       </div>
@@ -45,7 +46,7 @@
       <details>
         <summary class="small secondary" style="cursor: pointer">Hub address</summary>
         <div class="field" style="margin-top: 8px">
-          <label for="hub">Hub URL</label>
+          <div class="label-row"><label for="hub">Hub URL</label><Tip field="login.hub" /></div>
           <input id="hub" type="text" bind:value={hubUrl} placeholder="Leave empty to use this site" autocomplete="off" spellcheck="false" />
           <span class="hint">Only needed when the dashboard is hosted apart from the hub. The hub must allow this site's address (CORS).</span>
         </div>

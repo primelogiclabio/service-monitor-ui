@@ -25,13 +25,13 @@
     <table class="data">
       <thead>
         <tr>
-          <th>Status</th>
-          <th>Type</th>
-          {#if showServer}<th>Server</th>{/if}
-          <th>Check</th>
-          <th class="num">Reading</th>
-          <th class="hide-sm">Message</th>
-          <th class="hide-sm">Changed</th>
+          <th title="Up, Warning, Down, Unknown (no result yet) or Off (the check is disabled)">Status</th>
+          <th title="What the check tests">Type</th>
+          {#if showServer}<th title="The server the check belongs to; empty for checks the hub runs on its own">Server</th>{/if}
+          <th title="Click a check to see its history, run it, edit it or delete it">Check</th>
+          <th class="num" title="The latest measurement: response time, or percent used for CPU, memory and disk">Reading</th>
+          <th class="hide-sm" title="What the latest result said">Message</th>
+          <th class="hide-sm" title="How long ago the status last changed">Changed</th>
         </tr>
       </thead>
       <tbody>

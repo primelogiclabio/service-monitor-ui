@@ -65,11 +65,11 @@
     </section>
 
     <section class="tiles" aria-label="Summary">
-      <div class="tile"><div class="label">Servers online</div><div class="value">{servers.length - offline}<span class="muted" style="font-size: 1rem"> / {servers.length}</span></div></div>
-      <div class="tile"><div class="label">Checks up</div><div class="value">{data.summary.checks.up}</div></div>
-      <div class="tile"><div class="label">Warnings</div><div class="value">{data.summary.checks.warn}</div></div>
-      <div class="tile"><div class="label">Checks down</div><div class="value">{data.summary.checks.down}</div></div>
-      <div class="tile"><div class="label">Unknown</div><div class="value">{data.summary.checks.unknown}</div><div class="sub">No result yet</div></div>
+      <div class="tile" title="Servers whose agent has reported recently"><div class="label">Servers online</div><div class="value">{servers.length - offline}<span class="muted" style="font-size: 1rem"> / {servers.length}</span></div></div>
+      <div class="tile" title="Enabled checks whose latest result is fine"><div class="label">Checks up</div><div class="value">{data.summary.checks.up}</div></div>
+      <div class="tile" title="Checks over their warning threshold, or with a certificate about to expire"><div class="label">Warnings</div><div class="value">{data.summary.checks.warn}</div></div>
+      <div class="tile" title="Checks that have failed as many times in a row as they allow"><div class="label">Checks down</div><div class="value">{data.summary.checks.down}</div></div>
+      <div class="tile" title="Checks that have not produced a result yet"><div class="label">Unknown</div><div class="value">{data.summary.checks.unknown}</div><div class="sub">No result yet</div></div>
     </section>
 
     <section class="filters" aria-label="Filters">

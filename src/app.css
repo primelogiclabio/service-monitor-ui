@@ -311,30 +311,106 @@ footer.site {
   background: transparent;
 }
 
-/* Help panels: a native <details>, so keyboard and screen readers work without script. */
-.help {
+/* Info icons beside field labels (Tip.svelte). The popover is fixed so no scrolling container clips it. */
+.label-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.tip {
+  display: inline-flex;
+}
+.tip-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  cursor: help;
+}
+.tip-btn:hover,
+.tip-btn[aria-expanded='true'] {
+  color: var(--accent);
+}
+.tip-pop {
+  position: fixed;
+  z-index: 100;
+  padding: 8px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+  font-size: 0.8125rem;
+  font-weight: 400;
+  line-height: 1.4;
+  text-transform: none;
+  letter-spacing: normal;
+}
+th[title],
+.tile[title] {
+  cursor: help;
+}
+
+/* Help on the right: a button at the top right opens a panel beside the content, and the panel closes from the
+   right too. On a narrow screen the panel stacks above the content. */
+.with-help {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+.with-help.open {
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 380px);
+}
+.with-help > .help-toggle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.with-help.bar > .help-toggle {
+  position: static;
+  justify-self: end;
+}
+.help-panel {
+  position: sticky;
+  top: 12px;
+  max-height: calc(100vh - 24px);
+  overflow: auto;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface);
 }
-.help > summary {
-  cursor: pointer;
+.help-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   padding: 10px 14px;
-  font-weight: 600;
-  color: var(--accent);
-  list-style-position: inside;
-}
-.help > summary h2 {
-  display: inline;
-  font-size: 1.0625rem;
-  color: var(--ink);
-}
-.help[open] > summary {
   border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+}
+.help-panel-head h2 {
+  font-size: 1.0625rem;
 }
 .help-body {
   padding: 12px 14px 14px;
   font-size: 0.9375rem;
+}
+.card .help-body {
+  padding: 0;
+}
+.help-body h2 {
+  font-size: 1.125rem;
 }
 .help-body ol,
 .help-body ul {
@@ -357,7 +433,19 @@ footer.site {
   margin: 0;
   color: var(--ink-2);
 }
-@media (max-width: 640px) {
+/* A dialog grows to make room for its help panel. */
+.modal:has(.with-help.open) {
+  width: min(1100px, 100%);
+}
+@media (max-width: 860px) {
+  .with-help.open {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .with-help.open > .help-panel {
+    order: -1;
+    position: static;
+    max-height: none;
+  }
   .help-body dl {
     grid-template-columns: 1fr;
     gap: 0;

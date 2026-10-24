@@ -1,7 +1,9 @@
 <script>
   import { AGENT_ONLY_TYPES, CHECK_TYPES } from '../lib/format.js';
   import { TARGET_HELP, defaultThresholds } from '../lib/checks.js';
-  import Help from './Help.svelte';
+  import WithHelp from './WithHelp.svelte';
+  import Tip from './Tip.svelte';
+  import { typeHelp } from '../lib/help.js';
 
   let { servers = [], initial = null, presetServerId = '', busy = false, error = '', onsubmit, oncancel } = $props();
 
@@ -105,25 +107,28 @@
   }
 </script>
 
+{#snippet formBody()}
 <form onsubmit={submit} class="stack" novalidate>
-  {#if !edit}<Help topic="addCheck" />{/if}
   <div class="form-grid">
     <div class="field">
-      <label for="cf-type">Type</label>
+      <div class="label-row"><label for="cf-type">Type</label><Tip field="check.type" /></div>
       <select id="cf-type" value={type} onchange={changeType} disabled={edit}>
         {#each CHECK_TYPES as t}<option value={t}>{t}</option>{/each}
       </select>
       {#if agentOnly}<span class="hint">Runs on the server's agent.</span>{/if}
     </div>
     <div class="field">
-      <label for="cf-name">Name</label>
+      <div class="label-row"><label for="cf-name">Name</label><Tip field="check.name" /></div>
       <input id="cf-name" type="text" bind:value={name} maxlength="200" autocomplete="off" />
     </div>
   </div>
 
   {#if needsTarget}
     <div class="field">
-      <label for="cf-target">{help?.label ?? 'Target'}</label>
+      <div class="label-row">
+        <label for="cf-target">{help?.label ?? 'Target'}</label>
+        <Tip text={typeHelp(type)} label="{type} checks" />
+      </div>
       <input id="cf-target" type="text" bind:value={target} placeholder={help?.placeholder} autocomplete="off" spellcheck="false" />
       {#if help?.hint}<span class="hint">{help.hint}</span>{/if}
     </div>
@@ -131,7 +136,7 @@
 
   <div class="form-grid">
     <div class="field">
-      <label for="cf-server">Server{needsServer ? '' : ' (optional)'}</label>
+      <div class="label-row"><label for="cf-server">Server{needsServer ? '' : ' (optional)'}</label><Tip field="check.server" /></div>
       <select id="cf-server" bind:value={serverId}>
         <option value="">{needsServer ? 'Choose a server' : 'None (hub-level check)'}</option>
         {#each servers as s (s.id)}<option value={s.id}>{s.name}</option>{/each}
@@ -139,7 +144,7 @@
     </div>
     {#if !agentOnly}
       <div class="field">
-        <label for="cf-run">Runs from</label>
+        <div class="label-row"><label for="cf-run">Runs from</label><Tip field="check.runFrom" /></div>
         <select id="cf-run" bind:value={runFrom}>
           <option value="HUB">The hub</option>
           <option value="AGENT">The server's agent</option>
@@ -152,33 +157,39 @@
   {#if type === 'HTTP'}
     <div class="form-grid">
       <div class="field">
-        <label for="cf-status">Accepted status codes</label>
+        <div class="label-row"><label for="cf-status">Accepted status codes</label><Tip field="check.expectStatus" /></div>
         <input id="cf-status" type="text" bind:value={expectStatus} placeholder="200-299" autocomplete="off" />
         <span class="hint">For example 200-299,301</span>
       </div>
       <div class="field">
-        <label for="cf-keyword">Body must contain</label>
+        <div class="label-row"><label for="cf-keyword">Body must contain</label><Tip field="check.keyword" /></div>
         <input id="cf-keyword" type="text" bind:value={keyword} autocomplete="off" />
       </div>
       <div class="field">
-        <label for="cf-cert">Warn before certificate expires (days)</label>
+        <div class="label-row"><label for="cf-cert">Warn before certificate expires (days)</label><Tip field="check.certWarnDays" /></div>
         <input id="cf-cert" type="number" min="1" bind:value={certWarnDays} placeholder="14" />
       </div>
     </div>
     <div class="row" style="gap: 20px">
-      <label class="check"><input type="checkbox" bind:checked={followRedirects} /> Follow redirects</label>
-      <label class="check"><input type="checkbox" bind:checked={ignoreTls} /> Accept any TLS certificate</label>
+      <span class="check">
+        <label class="check"><input type="checkbox" bind:checked={followRedirects} /> Follow redirects</label>
+        <Tip field="check.followRedirects" />
+      </span>
+      <span class="check">
+        <label class="check"><input type="checkbox" bind:checked={ignoreTls} /> Accept any TLS certificate</label>
+        <Tip field="check.ignoreTls" />
+      </span>
     </div>
   {/if}
 
   {#if thresholdType}
     <div class="form-grid">
       <div class="field">
-        <label for="cf-warn">Warning at (% used)</label>
+        <div class="label-row"><label for="cf-warn">Warning at (% used)</label><Tip field="check.warn" /></div>
         <input id="cf-warn" type="number" min="0" max="100" step="any" bind:value={warn} placeholder={String(defaults?.warn ?? '')} />
       </div>
       <div class="field">
-        <label for="cf-crit">Down at (% used)</label>
+        <div class="label-row"><label for="cf-crit">Down at (% used)</label><Tip field="check.crit" /></div>
         <input id="cf-crit" type="number" min="0" max="100" step="any" bind:value={crit} placeholder={String(defaults?.crit ?? '')} />
       </div>
     </div>
@@ -186,21 +197,24 @@
 
   <div class="form-grid">
     <div class="field">
-      <label for="cf-interval">Every (seconds)</label>
+      <div class="label-row"><label for="cf-interval">Every (seconds)</label><Tip field="check.interval" /></div>
       <input id="cf-interval" type="number" min="5" bind:value={interval} oninput={() => (intervalTouched = true)} />
     </div>
     <div class="field">
-      <label for="cf-timeout">Timeout (ms)</label>
+      <div class="label-row"><label for="cf-timeout">Timeout (ms)</label><Tip field="check.timeout" /></div>
       <input id="cf-timeout" type="number" min="100" step="100" bind:value={timeoutMs} />
     </div>
     <div class="field">
-      <label for="cf-failures">Failures before down</label>
+      <div class="label-row"><label for="cf-failures">Failures before down</label><Tip field="check.failures" /></div>
       <input id="cf-failures" type="number" min="1" max="20" bind:value={failures} />
       <span class="hint">Avoids alerts for a single dropped packet.</span>
     </div>
   </div>
 
-  <label class="check"><input type="checkbox" bind:checked={enabled} /> Enabled</label>
+  <span class="check">
+    <label class="check"><input type="checkbox" bind:checked={enabled} /> Enabled</label>
+    <Tip field="check.enabled" />
+  </span>
 
   {#if localError || error}<p class="form-error" role="alert">{localError || error}</p>{/if}
 
@@ -209,3 +223,12 @@
     <button class="btn primary" type="submit" disabled={busy}>{edit ? 'Save changes' : 'Add check'}</button>
   </div>
 </form>
+{/snippet}
+
+{#if edit}
+  {@render formBody()}
+{:else}
+  <WithHelp topic="addCheck" bar>
+    {@render formBody()}
+  </WithHelp>
+{/if}
