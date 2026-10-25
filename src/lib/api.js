@@ -57,6 +57,8 @@ export function createApi({ base = '', token = '', proxy = null, fetchImpl, onUn
     request,
     hub: () => request('GET', '/hub'),
     me: () => request('GET', '/me'),
+    /** The hub's own administrator: answers with an ADMIN token that ends after a few hours. */
+    passwordLogin: (body) => request('POST', '/login', body),
     status: () => request('GET', '/status'),
     checks: () => request('GET', '/checks'),
     check: (checkId) => request('GET', `/checks/${id(checkId)}`),

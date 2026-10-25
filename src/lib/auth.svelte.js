@@ -91,6 +91,16 @@ export async function login({ hubUrl, token, remember = false }) {
   }
 }
 
+/**
+ * Signs in as the hub's own administrator. The hub checks the password and answers with a token that ends after a
+ * few hours; from there it is an ordinary token session, and only the token is kept, never the password.
+ */
+export async function loginWithPassword({ hubUrl, username, password, remember = false }) {
+  const base = normalizeUrl(hubUrl);
+  const session = await createApi({ base }).passwordLogin({ username: username.trim(), password });
+  await login({ hubUrl: base, token: session.token, remember });
+}
+
 /** Resumes a saved session, or finds the proxy's. Returns true when signed in. */
 export async function restore() {
   let config;

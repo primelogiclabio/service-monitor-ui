@@ -164,6 +164,10 @@ export const FIELD_HELP = {
     label: 'API token',
     text: 'The hub prints an admin token once, when its database is first created. An admin can make more on the Tokens page or with `svcmon token create`.',
   },
+  'login.password': {
+    label: 'Administrator password',
+    text: "The hub's own administrator account, for when no other sign-in works. The hub prints its password once at first start; an admin can change it through the API. The password is sent to the hub and never stored in this browser.",
+  },
   'login.hub': {
     label: 'Hub address',
     text: "Leave empty when the hub serves this page. Otherwise enter the hub's address; the hub must list this site in its `cors-allowed-origins` setting.",

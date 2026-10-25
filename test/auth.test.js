@@ -124,3 +124,53 @@ describe('an active session', () => {
     expect(remembered.getItem('sm-auth')).toBeNull();
   });
 });
+
+describe('password sign-in as the hub administrator', () => {
+  const PASSWORD = 'correct horse battery staple';
+  const issued = () => reply(200, { token: GOOD, expiresAt: Date.now() + 43_200_000, scope: 'ADMIN', name: 'local-login' });
+
+  it('trades the password for a token, sends no credential with it, and keeps only the token', async () => {
+    routes['/login'] = issued;
+    routes['/hub'] = hubOk;
+    routes['/tokens'] = () => reply(200, []);
+    const { auth, loginWithPassword } = await import('../src/lib/auth.svelte.js');
+
+    await loginWithPassword({ hubUrl: 'http://hub:8080/', username: ' admin ', password: PASSWORD, remember: true });
+
+    const [url, init] = fetch.mock.calls[0];
+    expect(url).toBe('http://hub:8080/api/v1/login');
+    expect(init.method).toBe('POST');
+    expect(init.headers.Authorization).toBeUndefined();
+    expect(JSON.parse(init.body)).toEqual({ username: 'admin', password: PASSWORD });
+
+    expect(auth.token).toBe(GOOD);
+    expect(auth.admin).toBe(true);
+    expect(remembered.getItem('sm-auth')).toContain(GOOD);
+    for (const store of [session, remembered]) {
+      expect(store.getItem('sm-auth') ?? '').not.toContain(PASSWORD);
+    }
+  });
+
+  it('a wrong password starts no session and says so', async () => {
+    routes['/login'] = () => reply(401, { error: 'unauthorized', message: 'Wrong user name or password' });
+    const { auth, getApi, loginWithPassword } = await import('../src/lib/auth.svelte.js');
+    await expect(loginWithPassword({ hubUrl: '', username: 'admin', password: 'nope nope nope' })).rejects.toMatchObject({
+      status: 401,
+      message: 'Wrong user name or password',
+    });
+    expect(auth.token).toBe('');
+    expect(auth.error).toBe('');
+    expect(getApi()).toBeNull();
+  });
+
+  it("passes on the hub's wait message, and the hub's refusal when the account is off", async () => {
+    const { loginWithPassword } = await import('../src/lib/auth.svelte.js');
+    routes['/login'] = () => reply(429, { error: 'too_many_requests', message: 'Too many wrong attempts; try again in 600 seconds' });
+    await expect(loginWithPassword({ hubUrl: '', username: 'admin', password: PASSWORD })).rejects.toMatchObject({
+      status: 429,
+      message: expect.stringContaining('try again in 600 seconds'),
+    });
+    routes['/login'] = () => reply(404, { error: 'not_found', message: 'Local sign-in is turned off on this hub' });
+    await expect(loginWithPassword({ hubUrl: '', username: 'admin', password: PASSWORD })).rejects.toMatchObject({ status: 404 });
+  });
+});
