@@ -19,6 +19,8 @@ Status is always shown with a shape and a word as well as a colour. Light and da
 
 Paste an API token from the hub (the hub prints an admin token on first start; `svcmon token create` makes more). An ADMIN token can change things; a READ token only views. The token is kept in `sessionStorage` (cleared when the tab closes), or in `localStorage` if you tick "Remember this browser". It is only ever sent to the hub, in an `Authorization` header.
 
+The sign-in page also has **User name and password** for the hub's own administrator account (on by default in the hub; it prints the password once at first start, see its [README](https://github.com/primelogiclabio/service-monitor#local-admin-account)). The password goes to the hub once, which answers with an ordinary ADMIN token that ends after a few hours (12 by default); from then on it is a normal token session, and only that token is kept, never the password. After several wrong attempts the hub makes you wait, and the page shows how long. The last choice (password or token) is remembered in this browser. Where the hub has turned the account off, the page says so and the token form still works.
+
 ### Behind a sign-in proxy
 
 For a deployment where nginx signs the user in (a gateway checks the session and the hub accepts the OpenID Connect token the proxy adds; see the hub's [README](https://github.com/primelogiclabio/service-monitor#sign-in-with-keycloak-or-another-openid-connect-provider)), the page never holds a token and has no sign-in form. Switch it on in `config.json`, which sits next to `index.html` in `dist/` and can be edited without rebuilding:
