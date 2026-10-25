@@ -3,12 +3,14 @@
   import { auth, getApi } from '../lib/auth.svelte.js';
   import { notify } from '../lib/notify.svelte.js';
   import { CHECK_TYPES, RANGES } from '../lib/format.js';
+  import { filterChecks, flattenChecks } from '../lib/checks.js';
   import CheckTable from '../components/CheckTable.svelte';
   import CheckForm from '../components/CheckForm.svelte';
   import Modal from '../components/Modal.svelte';
 
   let range = $state('6h');
   let query = $state('');
+  let cluster = $state('all');
   let type = $state('all');
   let state = $state('all');
   let adding = $state(false);
@@ -16,23 +18,8 @@
   let formError = $state('');
 
   const servers = $derived(status.data ? status.data.clusters.flatMap((c) => c.servers) : []);
-  const all = $derived(
-    status.data
-      ? [
-          ...servers.flatMap((s) => s.checks.map((c) => ({ ...c, serverName: s.name }))),
-          ...status.data.hubChecks.map((c) => ({ ...c, serverName: null })),
-        ]
-      : [],
-  );
-  const shown = $derived(
-    all.filter((c) => {
-      if (type !== 'all' && c.type !== type) return false;
-      if (state === 'problems' && (!c.enabled || c.status === 'UP')) return false;
-      if (state === 'disabled' && c.enabled) return false;
-      const q = query.trim().toLowerCase();
-      return !q || c.name.toLowerCase().includes(q) || (c.target ?? '').toLowerCase().includes(q) || (c.serverName ?? '').toLowerCase().includes(q);
-    }),
-  );
+  const all = $derived(flattenChecks(status.data));
+  const shown = $derived(filterChecks(all, { cluster, type, state, query }));
 
   async function create(body) {
     busy = true;
@@ -52,7 +39,7 @@
 
 <div class="stack-lg">
   <div class="row between">
-    <h1 style="font-size: 1.75rem">Checks</h1>
+    <h1 style="font-size: 1.75rem">Monitors</h1>
     {#if auth.admin}
       <button class="btn primary" type="button" onclick={() => { formError = ''; adding = true; }}>Add check</button>
     {/if}
@@ -62,6 +49,13 @@
     <div class="field" style="flex: 1 1 220px">
       <label for="c-q">Search</label>
       <input id="c-q" type="search" bind:value={query} placeholder="Name, target or server" />
+    </div>
+    <div class="field">
+      <label for="c-cluster">Cluster</label>
+      <select id="c-cluster" bind:value={cluster}>
+        <option value="all">All clusters</option>
+        {#each status.data?.clusters ?? [] as cl (cl.name)}<option value={cl.name}>{cl.name}</option>{/each}
+      </select>
     </div>
     <div class="field">
       <label for="c-type">Type</label>

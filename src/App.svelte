@@ -38,13 +38,13 @@
   });
 
   const nav = $derived([
-    { name: 'overview', href: '#/', label: 'Overview' },
-    { name: 'checks', href: '#/checks', label: 'Checks' },
-    { name: 'enroll', href: '#/enroll', label: 'Add server' },
+    { name: 'overview', href: '#/', label: 'Dashboard' },
+    { name: 'checks', href: '#/checks', label: 'Monitors' },
     { name: 'tokens', href: '#/tokens', label: 'Tokens' },
     { name: 'help', href: '#/help', label: 'Help' },
   ]);
-  const current = $derived(route.name === 'server' ? 'overview' : route.name);
+  // A server's page and Add server are reached from the dashboard, so the dashboard stays marked.
+  const current = $derived(route.name === 'server' || route.name === 'enroll' ? 'overview' : route.name);
   const themeLabel = $derived({ system: 'Theme: auto', light: 'Theme: light', dark: 'Theme: dark' }[theme.pref]);
   const liveLabel = $derived({ off: 'Live: off', connecting: 'Live: connecting…', on: 'Live: on' }[live.state]);
 </script>

@@ -89,16 +89,16 @@
   <div class="card empty">
     <h2>Server not found</h2>
     <p>It may have been removed.</p>
-    <p style="margin-top: 12px"><a href="#/">Back to the overview</a></p>
+    <p style="margin-top: 12px"><a href="#/">Back to the dashboard</a></p>
   </div>
 {:else}
   <div class="stack-lg">
-    <div>
-      <p class="small" style="margin-bottom: 8px"><a href="#/">← Overview</a></p>
-      <div class="row between">
-        <div class="row" style="gap: 14px">
+    <div class="stack">
+      <a class="btn back" href="#/">← Dashboard</a>
+      <div class="server-head">
+        <div class="server-title">
           <StatusBadge status={server.agentOnline ? server.status : 'OFFLINE'} compact />
-          <div>
+          <div style="min-width: 0">
             <h1 style="font-size: 1.75rem; overflow-wrap: anywhere">{server.name}</h1>
             <p class="small secondary">
               Cluster {found.cluster} · {server.os ?? 'Unknown OS'}{server.agentVersion ? ` · agent ${server.agentVersion}` : ''} ·
@@ -108,7 +108,7 @@
           </div>
         </div>
         {#if auth.admin}
-          <div class="row">
+          <div class="server-actions">
             <button class="btn" type="button" title="Add a check for this server" onclick={() => { formError = ''; adding = true; }}>Add check</button>
             <button class="btn" type="button" title="Change the server's name or move it to another cluster" onclick={startRename}>Rename or move</button>
             <button class="btn danger" type="button" title="Remove the server from the hub, with its checks and history, and revoke its agent's credential. The agent keeps running on the machine until you uninstall it." onclick={() => (deleting = true)}>Remove</button>

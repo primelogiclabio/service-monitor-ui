@@ -9,19 +9,18 @@ export const HELP = {
   addServer: {
     title: 'Adding a server',
     summary:
-      'Servers add themselves. Install the small `svcmon` agent on a server with this hub\'s address and a join key, and it registers on its own when it starts. The agent only connects out, so the server needs no open ports.',
+      'Servers add themselves. Run one command on the server, with the small `svcmon` agent, and it registers with this hub on its own. The command is made for you here, with this hub\'s address and a join key already in it. The agent only connects out, so the server needs no open ports.',
     steps: [
-      'Get a join key: create one here (it is shown once, so save it) or paste one you saved before. One key works for any number of servers.',
+      'Choose what the server needs: a new agent installed, or an agent that is already installed enrolled with this hub. The command is ready to copy, with the hub address and a join key filled in. Add a cluster if you want the server grouped (optional).',
       'A new agent: copy the `svcmon` program to the server (one file; build it as described in the README, "Build the agent and CLI") and run the install command from its folder, in an elevated PowerShell on Windows or with `sudo` on Linux or macOS. It registers the server under its host name and starts the agent as a service.',
-      'An agent that is already installed (registered with another hub, or removed from this one): run the enroll command with the join key, then restart the agent service; both lines are given for each system. It keeps its program and service and only changes which hub it reports to.',
-      'The server shows up on the Overview within seconds. Nothing is monitored until you add checks: open the server and choose Add check.',
+      'An agent that is already installed (registered with another hub, or removed from this one): run the enroll command, then restart the agent service; both lines are given for each system. It keeps its program and service and only changes which hub it reports to.',
+      'The server shows up on the Dashboard within seconds. Nothing is monitored until you add checks: open the server and choose Add check.',
     ],
     notes: [
-      'A join key is reusable: the same command registers any number of servers until you revoke it, and it can put them all in one cluster (a server asking for another cluster is refused). Anyone holding it can add servers, so keep it like a password. Revoking it does not affect servers it already registered.',
-      'For a single server you can use a one-time token instead, under "Other ways". It works once and expires after 1 hour unless you choose another time, 1 day at most. Unused tokens can be revoked on the Tokens page.',
+      'The join key in the command is made by the dashboard when you open the page. It works for 24 hours and registers any number of servers; "Make a new one" replaces it. Anyone holding it can add servers, so keep it like a password. If it leaks, revoke it under "Other ways"; servers it already registered keep working.',
+      '"Other ways" has a join key that lasts longer (for a script or a team, optionally tied to one cluster) and a one-time token for a single server. A one-time token works once and expires after 1 hour unless you choose another time, 1 day at most. Unused tokens can be revoked on the Tokens page.',
       'Registering gives the server its own permanent credential, kept in `agent.json` on that server; the join key or token is no longer needed afterwards.',
-      'On the hub\'s own machine, give the agent the hub\'s local address; the link under the hub address fills it in.',
-      'If this page is reached through a load balancer, give the server the hub\'s internal address instead.',
+      'The command uses the address of this page for the hub. Choose Change beside it when that is not what the server should use: on the hub\'s own machine give the local address (a link fills it in), and if this page is reached through a load balancer give the hub\'s internal address.',
     ],
   },
   addCheck: {
@@ -29,9 +28,8 @@ export const HELP = {
     summary:
       'A check is one thing that is tested on a schedule: a web address that answers, a port that is open, a host that replies, a service that is running, or CPU, memory or disk staying under a limit. Nothing is monitored until you add it.',
     steps: [
-      'Choose the Type. The field under the name changes to match.',
       'Give it a name you will recognise in an alert.',
-      'Say what to test (the address, host and port, service name or drive).',
+      'Choose the Type. The field beside it changes to match: fill in what to test (the address, host and port, service name or drive).',
       'CPU, memory, disk and service checks belong to a server and run on its agent, so choose the server. HTTP, TCP and ping run from the hub unless you choose "The server\'s agent".',
       'The timing defaults suit most checks. Press Add check; its status appears within one interval.',
     ],
@@ -53,6 +51,14 @@ export const HELP = {
     ],
   },
 };
+
+/** The sections of the Help page, in page order: the jump menu lists them and each `id` is the section's element id. */
+export const HELP_SECTIONS = [
+  { key: 'addServer', id: 'adding-a-server', label: HELP.addServer.title },
+  { key: 'addCheck', id: 'adding-a-check', label: HELP.addCheck.title },
+  { key: 'live', id: 'live-view', label: 'Live view' },
+  { key: 'icons', id: 'info-icons', label: 'Info icons' },
+];
 
 /**
  * One short explanation per form field, shown by the info icon (see Tip.svelte) next to the field's label.
@@ -128,7 +134,7 @@ export const FIELD_HELP = {
   },
   'enroll.cluster': {
     label: 'Cluster',
-    text: 'A group name such as prod or staging; the Overview groups servers by it. Optional, and it can be changed later with Rename or move.',
+    text: 'A group name such as prod or staging; the Dashboard groups servers by it. Optional, and it can be changed later with Rename or move.',
   },
   'joinKey.paste': {
     label: 'Join key',
@@ -164,7 +170,7 @@ export const FIELD_HELP = {
   },
   'server.cluster': {
     label: 'Cluster',
-    text: 'A group name such as prod or staging; the Overview groups servers by it. Leave empty for none.',
+    text: 'A group name such as prod or staging; the Dashboard groups servers by it. Leave empty for none.',
   },
 };
 
