@@ -1,4 +1,4 @@
-import { createApi } from './api.js';
+import { ApiError, createApi } from './api.js';
 import { loadConfig } from './config.js';
 
 const KEY = 'sm-auth';
@@ -10,7 +10,9 @@ const REDIRECT_GUARD_MS = 30_000;
  * Who is signed in. `admin` is discovered from the hub (only ADMIN tokens may list tokens).
  * `mode` is 'token' (an API token pasted by the user) or 'proxy' (nginx signs the user in and adds the credential,
  * so the page holds none). In proxy mode a visitor who is not signed in sees a gate: `gate` says why
- * ('signin', 'forbidden' or 'unreachable') and `error` carries the hub's message.
+ * ('signin', 'forbidden' or 'unreachable') and `error` carries the hub's message. When nothing answers as the proxy
+ * ('unreachable'), the page falls back to `mode` 'token' so the token and password forms stay usable; `fallback` then
+ * says why, in words for the sign-in page, and `proxy` is kept so the page can offer to try the proxy again.
  */
 export const auth = $state({
   hubUrl: '',
@@ -24,6 +26,7 @@ export const auth = $state({
   proxy: null,
   gate: '',
   redirecting: false,
+  fallback: '',
 });
 
 let api = null;
@@ -101,7 +104,11 @@ export async function loginWithPassword({ hubUrl, username, password, remember =
   await login({ hubUrl: base, token: session.token, remember });
 }
 
-/** Resumes a saved session, or finds the proxy's. Returns true when signed in. */
+/**
+ * Finds the proxy's session, or resumes a saved token session. Returns true when signed in. When a proxy is set but
+ * nothing answers as one (the hub reached on its own address through an SSH tunnel, or the sign-in service is down),
+ * the token and password sign-in takes over, so the dashboard is never stuck behind a gate with no way in.
+ */
 export async function restore() {
   let config;
   try {
@@ -110,8 +117,18 @@ export async function restore() {
     auth.error = e.message; // a wrong config.json is shown on the sign-in page, not ignored
     config = { proxy: null };
   }
-  if (config.proxy) return startProxy(config.proxy, { auto: true });
+  if (config.proxy) {
+    if (await startProxy(config.proxy, { auto: true })) return true;
+    if (auth.gate !== 'unreachable') return false; // 401 and 403 are the proxy answering: its gate is the way on
+    auth.mode = 'token';
+    auth.gate = '';
+    auth.error = '';
+  }
+  return resumeSaved();
+}
 
+/** Signs in again from the token saved in this browser, if there is one. */
+async function resumeSaved() {
   let saved = null;
   for (const s of [sessionStorage, localStorage]) {
     try {
@@ -147,6 +164,8 @@ export async function startProxy(settings, { auto = false } = {}) {
   });
   try {
     const me = await candidate.me();
+    // A host that answers every path with the page itself gives 200 and no JSON: that is no proxy either.
+    if (!me || typeof me !== 'object') throw new ApiError(404, 'No sign-in service answered');
     const hub = await candidate.hub();
     api = candidate;
     auth.mode = 'proxy';
@@ -159,6 +178,7 @@ export async function startProxy(settings, { auto = false } = {}) {
     auth.hub = hub;
     auth.error = '';
     auth.gate = '';
+    auth.fallback = '';
     auth.redirecting = false;
     return true;
   } catch (e) {
@@ -171,9 +191,16 @@ export async function startProxy(settings, { auto = false } = {}) {
     auth.admin = false;
     auth.gate = e.status === 401 ? 'signin' : e.status === 403 ? 'forbidden' : 'unreachable';
     auth.error = e.status === 401 ? '' : e.message;
+    auth.fallback = auth.gate === 'unreachable' ? unreachableReason(e) : '';
     auth.redirecting = auth.gate === 'signin' && auto && redirectToSignIn({ guarded: true });
     return false;
   }
+}
+
+function unreachableReason(e) {
+  if (!e.status) return 'the sign-in service did not answer';
+  if (e.status === 404) return 'this address has no sign-in service';
+  return `the sign-in service answered ${e.status}`;
 }
 
 function endProxySession(gate, message) {
