@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { parseHash, serverHref } from '../src/lib/router.js';
-import { defToRequest, defaultThresholds, thresholdsFor } from '../src/lib/checks.js';
+import { defToRequest, defaultThresholds, isDown, thresholdsFor } from '../src/lib/checks.js';
 
 describe('parseHash', () => {
   it('routes known paths', () => {
@@ -59,5 +59,15 @@ describe('thresholds', () => {
   });
   it('has none for non-percentage checks', () => {
     expect(thresholdsFor('HTTP', {})).toEqual({ warn: null, crit: null });
+  });
+});
+
+describe('isDown', () => {
+  it('is true only for an enabled check reporting DOWN', () => {
+    expect(isDown({ enabled: true, status: 'DOWN' })).toBe(true);
+    for (const status of ['UP', 'WARN', 'UNKNOWN']) expect(isDown({ enabled: true, status }), status).toBe(false);
+    // A disabled check shows as Disabled, so it is not highlighted even if its last result was DOWN.
+    expect(isDown({ enabled: false, status: 'DOWN' })).toBe(false);
+    expect(isDown(undefined)).toBe(false);
   });
 });

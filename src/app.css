@@ -921,6 +921,10 @@ table.data tr.clickable {
 table.data tr.clickable:hover td {
   background: var(--accent-wash);
 }
+/* A check that is down gets a light red row, in addition to its red X and "Down" label. */
+table.data tr.down > td {
+  background: var(--wash-critical);
+}
 table.data td.num,
 table.data th.num {
   text-align: right;

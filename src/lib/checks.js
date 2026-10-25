@@ -38,6 +38,11 @@ export function filterChecks(checks, { cluster = 'all', type = 'all', state = 'a
   });
 }
 
+/** A check that is switched on and reporting DOWN (the red X). A disabled check shows as Disabled, whatever it last said. */
+export function isDown(check) {
+  return Boolean(check?.enabled) && check.status === 'DOWN';
+}
+
 /** The thresholds the agent applies when a check does not set its own. */
 export function defaultThresholds(type) {
   if (type === 'DISK') return { warn: 80, crit: 90 };
