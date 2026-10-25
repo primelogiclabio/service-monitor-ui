@@ -62,3 +62,24 @@ export function installCommands(opts) {
   const args = installArgs(opts);
   return { windows: `.\\svcmon.exe agent install ${args}`, unix: `sudo ./svcmon agent install ${args}` };
 }
+
+/** The agent's service on each system, as `svcmon agent install` registers it. */
+export const AGENT_SERVICE = {
+  windows: 'svcmon-agent',
+  linux: 'svcmon-agent',
+  macos: 'io.primelogiclab.svcmon.agent',
+};
+
+/**
+ * For an agent that is already installed: register it with this hub (replacing whatever it was registered with)
+ * and restart its service so it picks that up. `agent install` would refuse, since the service already exists.
+ * The restart differs between Linux and macOS, so each gets its own lines.
+ */
+export function reconnectCommands(opts) {
+  const args = installArgs(opts);
+  return {
+    windows: `.\\svcmon.exe agent enroll ${args}\nRestart-Service ${AGENT_SERVICE.windows}`,
+    linux: `sudo ./svcmon agent enroll ${args}\nsudo systemctl restart ${AGENT_SERVICE.linux}`,
+    macos: `sudo ./svcmon agent enroll ${args}\nsudo launchctl kickstart -k system/${AGENT_SERVICE.macos}`,
+  };
+}

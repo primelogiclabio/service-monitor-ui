@@ -1,12 +1,14 @@
 <script>
   import { notify } from '../lib/notify.svelte.js';
-  import { installCommands } from '../lib/enroll.js';
+  import { installCommands, reconnectCommands } from '../lib/enroll.js';
   import Tip from './Tip.svelte';
 
   /**
-   * The install command for each platform in `order` (likelier first), filled in with `token` (a join key or a
-   * one-time token) or `placeholder` until there is one. `localHub` offers the hub's own address for installing on
-   * its machine. A join key that pins a cluster (`fixedCluster`) decides it, so the cluster box is left out.
+   * The commands for each platform in `order` (likelier first), filled in with `token` (a join key or a one-time
+   * token) or `placeholder` until there is one. `mode` 'new' installs the agent; 'existing' registers an agent that
+   * is already installed and restarts its service, which differs between Linux and macOS. `localHub` offers the
+   * hub's own address for its own machine. A join key that pins a cluster (`fixedCluster`) decides it, so the
+   * cluster box is left out.
    */
   let {
     token = '',
@@ -14,6 +16,7 @@
     hub: initialHub = '',
     localHub = '',
     order = ['windows', 'unix'],
+    mode = 'new',
     idPrefix = 'ac',
     fixedCluster = null,
   } = $props();
@@ -23,8 +26,17 @@
   let hub = $state(start.hub);
   let cluster = $state('');
 
-  const commands = $derived(installCommands({ hub, token, cluster: fixedCluster ? '' : cluster, placeholder }));
-  const labels = { windows: 'Windows — in an elevated PowerShell', unix: 'Linux or macOS' };
+  const existing = $derived(mode === 'existing');
+  const commands = $derived(
+    (existing ? reconnectCommands : installCommands)({ hub, token, cluster: fixedCluster ? '' : cluster, placeholder }),
+  );
+  const platforms = $derived(existing ? order.flatMap((p) => (p === 'unix' ? ['linux', 'macos'] : [p])) : order);
+  const labels = {
+    windows: 'Windows — in an elevated PowerShell',
+    unix: 'Linux or macOS',
+    linux: 'Linux',
+    macos: 'macOS',
+  };
 
   async function copy(text) {
     try {
@@ -62,7 +74,7 @@
   {/if}
 </div>
 
-{#each order as os (os)}
+{#each platforms as os (os)}
   <div class="field">
     <span class="label">{labels[os]}</span>
     <div class="copybox">
@@ -72,6 +84,12 @@
   </div>
 {/each}
 <p class="small muted">
-  Run it from the folder that holds <code>svcmon</code>. It registers the server under its host name (add
-  <code>--name</code> for another), then installs and starts the agent as a system service.
+  {#if existing}
+    Run it as an administrator from the folder of the installed <code>svcmon</code>. It registers the server with this hub
+    under its host name (add <code>--name</code> for another), replacing any earlier registration, then restarts the agent
+    so it reports here.
+  {:else}
+    Run it from the folder that holds <code>svcmon</code>. It registers the server under its host name (add
+    <code>--name</code> for another), then installs and starts the agent as a system service.
+  {/if}
 </p>

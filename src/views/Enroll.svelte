@@ -26,6 +26,9 @@
   let error = $state('');
   let listVersion = $state(0);
 
+  // Step 2: a new agent, or one that is already installed and only needs to register here.
+  let way = $state('new');
+
   const key = $derived(pasted.trim() || created?.token || '');
   const keyCluster = $derived(!pasted.trim() && created?.cluster ? created.cluster : null);
   const showCreate = $derived(creating || (keysKnown !== null && keysKnown.length === 0 && !created));
@@ -160,12 +163,34 @@
 
   <section class="card stack" aria-labelledby="step-run">
     <h2 id="step-run">2. On each server</h2>
-    <ol class="steps">
-      <li>Copy the <code>svcmon</code> program to the server. It is one file; see the README, "Build the agent and CLI".</li>
-      <li>Run the command below there, from the folder that holds it.</li>
-    </ol>
-    {#key keyCluster}
-      <AgentCommands token={key} placeholder="<join key>" hub={pageHub} {localHub} {order} fixedCluster={keyCluster} idPrefix="add" />
+    <div class="segmented" role="group" aria-label="Is the agent already on the server?">
+      <button type="button" aria-pressed={way === 'new'} onclick={() => (way = 'new')}>Install a new agent</button>
+      <button type="button" aria-pressed={way === 'existing'} onclick={() => (way = 'existing')}>Agent already installed</button>
+    </div>
+    {#if way === 'new'}
+      <ol class="steps">
+        <li>Copy the <code>svcmon</code> program to the server. It is one file; see the README, "Build the agent and CLI".</li>
+        <li>Run the command below there, from the folder that holds it.</li>
+      </ol>
+    {:else}
+      <p class="secondary">
+        For an agent installed earlier, for example registered with another hub or removed from this one. It keeps its program
+        and service and only changes which hub it reports to. If the server is already on the <a href="#/">Overview</a> and
+        online, there is nothing to do; if an old entry with its name is still listed, remove it first (open it and choose
+        Remove) or add <code>--name</code>.
+      </p>
+    {/if}
+    {#key `${way}|${keyCluster}`}
+      <AgentCommands
+        token={key}
+        placeholder="<join key>"
+        hub={pageHub}
+        {localHub}
+        {order}
+        mode={way}
+        fixedCluster={keyCluster}
+        idPrefix="add"
+      />
     {/key}
     {#if !key}<p class="small muted">Create or paste a join key in step 1 and it is filled in here.</p>{/if}
   </section>
@@ -179,9 +204,7 @@
   </section>
 
   <details class="card">
-    <summary style="cursor: pointer">
-      <strong>Other ways</strong>: a one-time token for a single server, or an agent that is already installed
-    </summary>
+    <summary style="cursor: pointer"><strong>Other ways</strong>: a one-time token for a single server</summary>
     <div class="stack" style="margin-top: 14px">
       {#if auth.admin}
         <form class="stack" onsubmit={createToken}>
@@ -215,25 +238,6 @@
         {/if}
       {/if}
 
-      <h3 style="font-size: 1rem">Agent already installed?</h3>
-      <p class="secondary">
-        Once an agent has registered it keeps its own credential in <code>agent.json</code> on the server; the key or token is
-        no longer needed.
-      </p>
-      <ul class="stack" style="padding-left: 20px; gap: 8px">
-        <li>
-          <strong>It is on the Overview:</strong> nothing to do. To (re)install the service from its settings, run
-          <code>svcmon agent install</code> with no token.
-        </li>
-        <li>
-          <strong>It is not</strong> (deleted from the hub, or a new hub): run the step 2 command again; giving
-          <code>--token</code> replaces the old registration.
-        </li>
-        <li>
-          <strong>Its name is taken:</strong> delete the old server entry first (open it and choose Remove) or add
-          <code>--name</code> with another name.
-        </li>
-      </ul>
     </div>
   </details>
 </div>

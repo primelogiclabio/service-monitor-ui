@@ -12,8 +12,8 @@ export const HELP = {
       'Servers add themselves. Install the small `svcmon` agent on a server with this hub\'s address and a join key, and it registers on its own when it starts. The agent only connects out, so the server needs no open ports.',
     steps: [
       'Get a join key: create one here (it is shown once, so save it) or paste one you saved before. One key works for any number of servers.',
-      'Copy the `svcmon` program to the server. It is one file; build it as described in the README ("Build the agent and CLI").',
-      'Run the install command on the server, from the folder that holds `svcmon`: in an elevated PowerShell on Windows, with `sudo` on Linux or macOS. It registers the server under its host name and starts the agent as a service.',
+      'A new agent: copy the `svcmon` program to the server (one file; build it as described in the README, "Build the agent and CLI") and run the install command from its folder, in an elevated PowerShell on Windows or with `sudo` on Linux or macOS. It registers the server under its host name and starts the agent as a service.',
+      'An agent that is already installed (registered with another hub, or removed from this one): run the enroll command with the join key, then restart the agent service; both lines are given for each system. It keeps its program and service and only changes which hub it reports to.',
       'The server shows up on the Overview within seconds. Nothing is monitored until you add checks: open the server and choose Add check.',
     ],
     notes: [
@@ -22,7 +22,6 @@ export const HELP = {
       'Registering gives the server its own permanent credential, kept in `agent.json` on that server; the join key or token is no longer needed afterwards.',
       'On the hub\'s own machine, give the agent the hub\'s local address; the link under the hub address fills it in.',
       'If this page is reached through a load balancer, give the server the hub\'s internal address instead.',
-      'Agent already installed? See "Other ways".',
     ],
   },
   addCheck: {
