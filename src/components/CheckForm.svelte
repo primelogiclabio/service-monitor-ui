@@ -43,6 +43,7 @@
   let followRedirects = $state(cfg.followRedirects ?? true);
   let ignoreTls = $state(cfg.ignoreTls ?? false);
   let certWarnDays = $state(cfg.certWarnDays ?? '');
+  let socket = $state(cfg.socket ?? '');
   let localError = $state('');
   let intervalTouched = edit;
 
@@ -87,6 +88,7 @@
       setOrDelete('ignoreTls', ignoreTls ? true : null);
       setOrDelete('certWarnDays', certWarnDays === '' ? '' : Number(certWarnDays));
     }
+    if (type === 'CONTAINER') setOrDelete('socket', socket.trim());
     if (thresholdType) {
       setOrDelete('warn', warn === '' ? '' : Number(warn));
       setOrDelete('crit', crit === '' ? '' : Number(crit));
@@ -179,6 +181,14 @@
         <label class="check"><input type="checkbox" bind:checked={ignoreTls} /> Accept any TLS certificate</label>
         <Tip field="check.ignoreTls" />
       </span>
+    </div>
+  {/if}
+
+  {#if type === 'CONTAINER'}
+    <div class="field">
+      <div class="label-row"><label for="cf-socket">Runtime socket (optional)</label><Tip field="check.socket" /></div>
+      <input id="cf-socket" type="text" bind:value={socket} placeholder="/var/run/docker.sock" autocomplete="off" spellcheck="false" />
+      <span class="hint">Leave empty to find Docker or Podman on the server automatically.</span>
     </div>
   {/if}
 
