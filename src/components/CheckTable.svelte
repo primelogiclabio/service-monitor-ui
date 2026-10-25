@@ -1,5 +1,6 @@
 <script>
   import { ago, cleanMessage, reading } from '../lib/format.js';
+  import { isDown } from '../lib/checks.js';
   import StatusBadge from './StatusBadge.svelte';
   import CheckDetail from './CheckDetail.svelte';
 
@@ -36,7 +37,7 @@
       </thead>
       <tbody>
         {#each checks as c (c.id)}
-          <tr>
+          <tr class:down={isDown(c)}>
             <td><StatusBadge status={c.enabled ? c.status : 'OFF'} /></td>
             <td>{c.type}</td>
             {#if showServer}<td>{c.serverName ?? '—'}</td>{/if}
