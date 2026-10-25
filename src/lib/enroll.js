@@ -15,9 +15,6 @@ export const JOIN_EXPIRY_CHOICES = [
   { days: 365, label: 'After 1 year' },
 ];
 
-/** Long enough to run the command, short enough to be harmless if forgotten. */
-export const THIS_SERVER_TTL_MINUTES = 10;
-
 export const quote = (s) => (/[\s"']/.test(s) ? `"${s}"` : s);
 
 export function isLoopbackHost(hostname) {
@@ -55,9 +52,10 @@ export function guessPlatform(userAgent) {
   return /windows/i.test(userAgent ?? '') ? 'windows' : 'unix';
 }
 
-export function installArgs({ hub, token, cluster }) {
+/** The install arguments; `placeholder` stands in for a token or join key not chosen yet. */
+export function installArgs({ hub, token, cluster, placeholder = '<token>' }) {
   const c = (cluster ?? '').trim();
-  return `--hub ${(hub ?? '').trim() || '<hub address>'} --token ${token || '<token>'}${c ? ` --cluster ${quote(c)}` : ''}`;
+  return `--hub ${(hub ?? '').trim() || '<hub address>'} --token ${(token ?? '').trim() || placeholder}${c ? ` --cluster ${quote(c)}` : ''}`;
 }
 
 export function installCommands(opts) {

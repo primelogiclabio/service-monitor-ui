@@ -48,3 +48,13 @@ describe('join key choices and names', () => {
     expect(text).toContain('revoke');
   });
 });
+
+describe('the Add server guide', () => {
+  it('walks through key, server, then checks', () => {
+    const [key, copy, run, appear] = HELP.addServer.steps;
+    expect(key).toContain('join key');
+    expect(copy).toContain('svcmon');
+    expect(run).toContain('elevated PowerShell');
+    expect(appear).toContain('Add check');
+  });
+});

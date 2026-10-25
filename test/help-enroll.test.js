@@ -3,7 +3,6 @@ import { HELP, parts } from '../src/lib/help.js';
 import { CHECK_TYPES } from '../src/lib/format.js';
 import { defaultThresholds } from '../src/lib/checks.js';
 import {
-  THIS_SERVER_TTL_MINUTES,
   TTL_CHOICES,
   guessPlatform,
   installArgs,
@@ -67,7 +66,6 @@ describe('token lifetime choices', () => {
       expect(c.minutes).toBeLessThanOrEqual(1440);
     }
     expect(TTL_CHOICES.map((c) => c.minutes)).toContain(60);
-    expect(THIS_SERVER_TTL_MINUTES).toBeLessThan(60);
   });
 });
 
@@ -114,6 +112,8 @@ describe('install commands', () => {
 
   it('show placeholders until there is something to fill in', () => {
     expect(installArgs({ hub: '', token: '' })).toBe('--hub <hub address> --token <token>');
+    expect(installArgs({ hub: 'http://hub:8080', token: '  ', placeholder: '<join key>' })).toBe('--hub http://hub:8080 --token <join key>');
+    expect(installArgs({ hub: 'http://hub:8080', token: ' svm_j_x ', placeholder: '<join key>' })).toBe('--hub http://hub:8080 --token svm_j_x');
   });
 
   it('differ only by how each system runs a program', () => {
