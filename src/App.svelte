@@ -1,12 +1,13 @@
 <script>
   import { onMount } from 'svelte';
-  import { auth, restore, signOut } from './lib/auth.svelte.js';
+  import { auth, logout, restore } from './lib/auth.svelte.js';
   import { status, startPolling, stopPolling } from './lib/status.svelte.js';
   import { live, toggleLive, stopLive } from './lib/live.svelte.js';
   import { route, startRouter } from './lib/route.svelte.js';
   import { theme, initTheme, cycleTheme } from './lib/theme.svelte.js';
   import { ago } from './lib/format.js';
   import Login from './views/Login.svelte';
+  import ProxyGate from './views/ProxyGate.svelte';
   import Overview from './views/Overview.svelte';
   import Server from './views/Server.svelte';
   import Checks from './views/Checks.svelte';
@@ -28,7 +29,7 @@
 
   // Poll the hub while signed in. Live mode, if switched on, takes over from polling until it ends.
   $effect(() => {
-    if (auth.token) {
+    if (auth.signedIn) {
       startPolling();
       return () => {
         stopLive();
@@ -51,8 +52,8 @@
 
 {#if !ready}
   <div class="login"><p class="muted">Loading…</p></div>
-{:else if !auth.token}
-  <Login />
+{:else if !auth.signedIn}
+  {#if auth.mode === 'proxy'}<ProxyGate />{:else}<Login />{/if}
 {:else}
   <header class="topbar">
     <div class="container">
@@ -74,7 +75,7 @@
           <span class="live-dot" aria-hidden="true"></span>{liveLabel}
         </button>
         <button class="btn small ghost" type="button" onclick={cycleTheme}>{themeLabel}</button>
-        <button class="btn small" type="button" onclick={() => signOut()}>Sign out</button>
+        <button class="btn small" type="button" onclick={logout}>Sign out</button>
       </div>
     </div>
   </header>
@@ -108,6 +109,7 @@
     <div class="container row between">
       <span>
         Hub {auth.hub?.version ?? ''} · {auth.admin ? 'admin access' : 'read-only access'}
+        {#if auth.user}· {auth.user}{/if}
         {#if auth.hubUrl}· {auth.hubUrl}{/if}
       </span>
       <span>

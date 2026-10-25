@@ -1,6 +1,6 @@
 # Service Monitor UI
 
-The web dashboard for [service-monitor](https://github.com/primelogiclabio/service-monitor). It is a static single-page app (Svelte 5 + Vite) that talks to the hub's REST API with a bearer token. It has no server of its own.
+The web dashboard for [service-monitor](https://github.com/primelogiclabio/service-monitor). It is a static single-page app (Svelte 5 + Vite) that talks to the hub's REST API with a bearer token, or, behind a sign-in proxy, with no token at all. It has no server of its own.
 
 ## What it shows
 
@@ -11,13 +11,38 @@ The web dashboard for [service-monitor](https://github.com/primelogiclabio/servi
 - **Tokens:** create and revoke API tokens.
 - **Help:** a Help button at the top right of Add server and of the Add check dialog opens a panel on the right that explains what to fill in (it closes from the right too, and remembers whether you left it open). The small **i** beside a field explains that field: hover over it, focus it with the keyboard, or click or tap it to keep it open, and press Escape to close it. Buttons and column headings have hover text, and the Help page in the top bar collects the topics, with a menu on the left that jumps between them and marks the one being read.
 
-**Live switch** (top right): by default the page asks the hub for the status every 5 seconds. Switch Live on and the hub pushes changes over a WebSocket as they happen instead, with no refresh delay. It needs a hub that has the live view (see its README) and a load balancer that passes WebSocket upgrades. It switches itself off after 5 minutes without activity (mouse, keyboard, touch or scroll while the tab is shown), and goes back to normal refreshing on its own if the connection drops, the hub refuses it or is full, or the hub is too old to have it, so the dashboard never depends on it. The token is sent in the connection's first message, never in its address.
+**Live switch** (top right): by default the page asks the hub for the status every 5 seconds. Switch Live on and the hub pushes changes over a WebSocket as they happen instead, with no refresh delay. It needs a hub that has the live view (see its README) and a load balancer that passes WebSocket upgrades. It switches itself off after 5 minutes without activity (mouse, keyboard, touch or scroll while the tab is shown), and goes back to normal refreshing on its own if the connection drops, the hub refuses it or is full, or the hub is too old to have it, so the dashboard never depends on it. The token is sent in the connection's first message, never in its address. Behind a sign-in proxy there is no token to send: the proxy adds the credential to the connection itself.
 
 Status is always shown with a shape and a word as well as a colour. Light and dark themes follow the system setting and can be overridden. The layout works on a phone.
 
 ## Sign-in
 
 Paste an API token from the hub (the hub prints an admin token on first start; `svcmon token create` makes more). An ADMIN token can change things; a READ token only views. The token is kept in `sessionStorage` (cleared when the tab closes), or in `localStorage` if you tick "Remember this browser". It is only ever sent to the hub, in an `Authorization` header.
+
+### Behind a sign-in proxy
+
+For a deployment where nginx signs the user in (a gateway checks the session and the hub accepts the OpenID Connect token the proxy adds; see the hub's [README](https://github.com/primelogiclabio/service-monitor#sign-in-with-keycloak-or-another-openid-connect-provider)), the page never holds a token and has no sign-in form. Switch it on in `config.json`, which sits next to `index.html` in `dist/` and can be edited without rebuilding:
+
+```json
+{
+  "proxy": {
+    "apiBase": "/web-api",
+    "headers": { "X-Web-Client": "1" },
+    "signInUrl": "/oauth2/start",
+    "signOutUrl": "/oauth2/sign_out"
+  }
+}
+```
+
+`"proxy": true` uses the values above; `"proxy": false` (the shipped file) or no file keeps the token sign-in. The page then:
+
+- calls `<apiBase>/v1/...` on its own site (the hub's `/api/v1/...` with the proxy rewriting the path), sending only the `headers`, which your proxy must require before it turns the session into a token; it never sends `Authorization`;
+- asks `GET <apiBase>/v1/me` who is signed in, and shows the name in the footer. No session (401) sends the visitor to `signInUrl?rd=<this page>` once (a second automatic redirect within 30 seconds shows a Sign in button instead, so a sign-in that does not take effect cannot loop); an account the proxy or hub refuses (403) gets a page that says so with a Sign out button; an unreachable hub gets a Try again button;
+- shows the sign-in page again, without leaving the current page, when the session ends while it is open;
+- leaves through `signOutUrl` on Sign out;
+- opens the Live view's WebSocket at `/api/v1/live` on its own site with no first message; your proxy must add the credential to that upgrade request and pass `X-Forwarded-Host` and `X-Forwarded-Proto`, as the hub's README shows.
+
+A wrong `config.json` (an unknown setting, an `Authorization` header, a `javascript:` address) is reported on the sign-in page instead of being ignored. The file is public and holds no secrets.
 
 ## Develop
 
@@ -52,7 +77,7 @@ Never run it against a hub that monitors real systems.
 npm run build        # writes dist/
 ```
 
-`dist/` is plain static files with relative paths, so it works from any folder or sub-path. Three ways to host it:
+`dist/` is plain static files with relative paths, so it works from any folder or sub-path. Its `config.json` is the only file meant to be edited (see "Behind a sign-in proxy"). Three ways to host it:
 
 1. **Let the hub serve it** (simplest, one address for everything). Start the hub with `--svcmon.ui-dir=/path/to/service-monitor-ui/dist` (or `svcmon.ui-dir` in its `application.yml`), open the hub's address, and leave "Hub address" empty at sign-in.
 2. **Behind the same address as the hub** through a load balancer that routes `/api` to the hub and everything else to a static file server. No hub setting is needed; leave "Hub address" empty at sign-in.
@@ -63,9 +88,10 @@ The hub's setting names are described in its [README](https://github.com/primelo
 ## Layout
 
 ```text
-src/lib/         api client, formatting, routing, auth/status/theme state
+src/lib/         api client, formatting, routing, auth/status/theme state, config.json reader
 src/components/  status badge, charts, check table, forms, dialogs
-src/views/       dashboard (overview.svelte), server, monitors (checks.svelte), add server, tokens, sign-in
+src/views/       dashboard (overview.svelte), server, monitors (checks.svelte), add server, tokens, sign-in, proxy gate
+public/          config.json (copied into dist/ as is)
 scripts/         demo data seeder
 test/            unit tests
 ```
