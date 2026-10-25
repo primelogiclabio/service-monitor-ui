@@ -707,6 +707,50 @@ input[type='checkbox'] {
   color: var(--ink);
 }
 
+/* A link that looks like a button (Add server, Back). */
+a.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+a.btn:hover {
+  text-decoration: none;
+}
+.btn.back {
+  align-self: flex-start;
+  gap: 8px;
+  padding: 8px 18px;
+  font-size: 1rem;
+}
+
+/* A server's page: the title takes the room that is left and wraps inside it, and the buttons keep their place at the
+   top right whatever the server is called or however long the line under it is. */
+.server-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.server-title {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.server-actions {
+  display: flex;
+  gap: 8px;
+  flex: none;
+}
+@media (max-width: 760px) {
+  .server-head,
+  .server-actions {
+    flex-wrap: wrap;
+  }
+}
+
 /* ---------- status badge ---------- */
 
 .badge {
@@ -725,6 +769,7 @@ input[type='checkbox'] {
 
 .hero {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 16px;
   padding: 20px;
@@ -752,6 +797,9 @@ input[type='checkbox'] {
 .hero .sub {
   color: var(--ink-2);
   margin-top: 4px;
+}
+.hero-action {
+  margin-left: auto;
 }
 
 .tiles {

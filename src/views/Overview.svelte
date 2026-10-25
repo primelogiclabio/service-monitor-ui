@@ -62,6 +62,9 @@
           {data.summary.checks.up + data.summary.checks.warn + data.summary.checks.down + data.summary.checks.unknown} checks
         </p>
       </div>
+      {#if auth.admin}
+        <a class="btn primary hero-action" href="#/enroll">Add server</a>
+      {/if}
     </section>
 
     <section class="tiles" aria-label="Summary">
@@ -92,7 +95,7 @@
         <h2>Nothing is monitored yet</h2>
         <p>Register a server with an agent, or add a check that the hub runs itself.</p>
         <p style="margin-top: 12px">
-          {#if auth.admin}<a class="btn primary" href="#/enroll" style="display: inline-block; text-decoration: none">Add a server</a>{:else}Ask an admin to add one.{/if}
+          {#if auth.admin}<a class="btn primary" href="#/enroll">Add a server</a>{:else}Ask an admin to add one.{/if}
         </p>
       </div>
     {:else}

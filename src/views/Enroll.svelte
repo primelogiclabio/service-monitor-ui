@@ -109,6 +109,7 @@
 
 <WithHelp topic="addServer">
 <div class="stack-lg" style="max-width: 820px">
+  <a class="btn back" href="#/">← Dashboard</a>
   <div>
     <h1 style="font-size: 1.75rem">Add a server</h1>
     <p class="secondary" style="margin-top: 4px">
@@ -172,7 +173,7 @@
     </div>
 
     <p class="secondary">
-      The server shows up on the <a href="#/">Overview</a> within seconds. Nothing is monitored until you add checks: open the
+      The server shows up on the <a href="#/">Dashboard</a> within seconds. Nothing is monitored until you add checks: open the
       server and choose Add check.
     </p>
   </section>

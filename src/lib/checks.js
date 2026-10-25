@@ -17,6 +17,27 @@ export function defToRequest(def, overrides = {}) {
   return { ...body, ...overrides };
 }
 
+/** Every check in a status roll-up as one list: each server's checks (with its server and cluster), then the hub's own. */
+export function flattenChecks(data) {
+  if (!data) return [];
+  return [
+    ...data.clusters.flatMap((cl) => cl.servers.flatMap((s) => s.checks.map((c) => ({ ...c, serverName: s.name, cluster: cl.name })))),
+    ...data.hubChecks.map((c) => ({ ...c, serverName: null, cluster: null })),
+  ];
+}
+
+/** Narrows checks by cluster (the hub's own checks belong to none, so choosing a cluster hides them), type, state and text. */
+export function filterChecks(checks, { cluster = 'all', type = 'all', state = 'all', query = '' } = {}) {
+  const q = query.trim().toLowerCase();
+  return checks.filter((c) => {
+    if (cluster !== 'all' && c.cluster !== cluster) return false;
+    if (type !== 'all' && c.type !== type) return false;
+    if (state === 'problems' && (!c.enabled || c.status === 'UP')) return false;
+    if (state === 'disabled' && c.enabled) return false;
+    return !q || c.name.toLowerCase().includes(q) || (c.target ?? '').toLowerCase().includes(q) || (c.serverName ?? '').toLowerCase().includes(q);
+  });
+}
+
 /** The thresholds the agent applies when a check does not set its own. */
 export function defaultThresholds(type) {
   if (type === 'DISK') return { warn: 80, crit: 90 };

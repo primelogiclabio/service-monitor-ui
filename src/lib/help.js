@@ -14,7 +14,7 @@ export const HELP = {
       'Choose what the server needs: a new agent installed, or an agent that is already installed enrolled with this hub. The command is ready to copy, with the hub address and a join key filled in. Add a cluster if you want the server grouped (optional).',
       'A new agent: copy the `svcmon` program to the server (one file; build it as described in the README, "Build the agent and CLI") and run the install command from its folder, in an elevated PowerShell on Windows or with `sudo` on Linux or macOS. It registers the server under its host name and starts the agent as a service.',
       'An agent that is already installed (registered with another hub, or removed from this one): run the enroll command, then restart the agent service; both lines are given for each system. It keeps its program and service and only changes which hub it reports to.',
-      'The server shows up on the Overview within seconds. Nothing is monitored until you add checks: open the server and choose Add check.',
+      'The server shows up on the Dashboard within seconds. Nothing is monitored until you add checks: open the server and choose Add check.',
     ],
     notes: [
       'The join key in the command is made by the dashboard when you open the page. It works for 24 hours and registers any number of servers; "Make a new one" replaces it. Anyone holding it can add servers, so keep it like a password. If it leaks, revoke it under "Other ways"; servers it already registered keep working.',
@@ -134,7 +134,7 @@ export const FIELD_HELP = {
   },
   'enroll.cluster': {
     label: 'Cluster',
-    text: 'A group name such as prod or staging; the Overview groups servers by it. Optional, and it can be changed later with Rename or move.',
+    text: 'A group name such as prod or staging; the Dashboard groups servers by it. Optional, and it can be changed later with Rename or move.',
   },
   'joinKey.paste': {
     label: 'Join key',
@@ -170,7 +170,7 @@ export const FIELD_HELP = {
   },
   'server.cluster': {
     label: 'Cluster',
-    text: 'A group name such as prod or staging; the Overview groups servers by it. Leave empty for none.',
+    text: 'A group name such as prod or staging; the Dashboard groups servers by it. Leave empty for none.',
   },
 };
 
