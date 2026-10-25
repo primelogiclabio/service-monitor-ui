@@ -7,6 +7,14 @@ export const TTL_CHOICES = [
   { minutes: 1440, label: '1 day (longest)' },
 ];
 
+/** When a join key stops working. The hub allows 1 to 3650 days, or none (until revoked). */
+export const JOIN_EXPIRY_CHOICES = [
+  { days: null, label: 'When revoked (no expiry)' },
+  { days: 30, label: 'After 30 days' },
+  { days: 90, label: 'After 90 days' },
+  { days: 365, label: 'After 1 year' },
+];
+
 /** Long enough to run the command, short enough to be harmless if forgotten. */
 export const THIS_SERVER_TTL_MINUTES = 10;
 
