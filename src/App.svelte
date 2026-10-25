@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { auth, logout, restore } from './lib/auth.svelte.js';
+  import { auth, logout, redirectEnded, restore, screen } from './lib/auth.svelte.js';
   import { status, startPolling, stopPolling } from './lib/status.svelte.js';
   import { live, toggleLive, stopLive } from './lib/live.svelte.js';
   import { route, startRouter } from './lib/route.svelte.js';
@@ -18,13 +18,21 @@
 
   let ready = $state(false);
   let now = $state(Date.now());
+  const view = $derived(screen(ready));
 
   onMount(() => {
     initTheme();
     startRouter();
     restore().finally(() => (ready = true));
     const t = setInterval(() => (now = Date.now()), 1000);
-    return () => clearInterval(t);
+    const back = (e) => {
+      if (e.persisted) redirectEnded();
+    };
+    window.addEventListener('pageshow', back);
+    return () => {
+      clearInterval(t);
+      window.removeEventListener('pageshow', back);
+    };
   });
 
   // Poll the hub while signed in. Live mode, if switched on, takes over from polling until it ends.
@@ -50,10 +58,12 @@
   const liveLabel = $derived({ off: 'Live: off', connecting: 'Live: connecting…', on: 'Live: on' }[live.state]);
 </script>
 
-{#if !ready}
+{#if view === 'loading'}
   <div class="login"><p class="muted">Loading…</p></div>
-{:else if !auth.signedIn}
-  {#if auth.mode === 'proxy'}<ProxyGate />{:else}<Login />{/if}
+{:else if view === 'gate'}
+  <ProxyGate />
+{:else if view === 'login'}
+  <Login />
 {:else}
   <header class="topbar">
     <div class="container">
