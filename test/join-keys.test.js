@@ -50,9 +50,9 @@ describe('join key choices and names', () => {
 });
 
 describe('the Add server guide', () => {
-  it('walks through the key, a new or an existing agent, then checks', () => {
-    const [key, fresh, existing, appear] = HELP.addServer.steps;
-    expect(key).toContain('join key');
+  it('walks through the choice, a new or an existing agent, then checks', () => {
+    const [choice, fresh, existing, appear] = HELP.addServer.steps;
+    expect(choice).toContain('join key');
     expect(fresh).toContain('install command');
     expect(fresh).toContain('elevated PowerShell');
     expect(existing).toContain('already installed');

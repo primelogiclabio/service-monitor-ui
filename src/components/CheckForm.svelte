@@ -109,7 +109,12 @@
 
 {#snippet formBody()}
 <form onsubmit={submit} class="stack" novalidate>
-  <div class="form-grid">
+  <div class="field">
+    <div class="label-row"><label for="cf-name">Name</label><Tip field="check.name" /></div>
+    <input id="cf-name" type="text" bind:value={name} maxlength="200" autocomplete="off" />
+  </div>
+
+  <div class="type-target">
     <div class="field">
       <div class="label-row"><label for="cf-type">Type</label><Tip field="check.type" /></div>
       <select id="cf-type" value={type} onchange={changeType} disabled={edit}>
@@ -117,22 +122,17 @@
       </select>
       {#if agentOnly}<span class="hint">Runs on the server's agent.</span>{/if}
     </div>
-    <div class="field">
-      <div class="label-row"><label for="cf-name">Name</label><Tip field="check.name" /></div>
-      <input id="cf-name" type="text" bind:value={name} maxlength="200" autocomplete="off" />
-    </div>
-  </div>
-
-  {#if needsTarget}
-    <div class="field">
-      <div class="label-row">
-        <label for="cf-target">{help?.label ?? 'Target'}</label>
-        <Tip text={typeHelp(type)} label="{type} checks" />
+    {#if needsTarget}
+      <div class="field">
+        <div class="label-row">
+          <label for="cf-target">{help?.label ?? 'Target'}</label>
+          <Tip text={typeHelp(type)} label="{type} checks" />
+        </div>
+        <input id="cf-target" type="text" bind:value={target} placeholder={help?.placeholder} autocomplete="off" spellcheck="false" />
+        {#if help?.hint}<span class="hint">{help.hint}</span>{/if}
       </div>
-      <input id="cf-target" type="text" bind:value={target} placeholder={help?.placeholder} autocomplete="off" spellcheck="false" />
-      {#if help?.hint}<span class="hint">{help.hint}</span>{/if}
-    </div>
-  {/if}
+    {/if}
+  </div>
 
   <div class="form-grid">
     <div class="field">

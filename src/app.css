@@ -210,8 +210,10 @@ code,
   font-weight: 600;
 }
 
-main {
-  padding: 24px 0 48px;
+/* main also carries .container, whose side padding would win over a plain `main` rule and leave no space under the header. */
+main.container {
+  padding-top: 32px;
+  padding-bottom: 48px;
 }
 
 footer.site {
@@ -372,7 +374,8 @@ th[title],
 }
 
 /* Help on the right: a button at the top right opens a panel beside the content, and the panel closes from the
-   right too. On a narrow screen the panel stacks above the content. */
+   right too. The panel takes the free width (two fifths of the row) so the text is easy to read. On a narrow screen
+   the panel stacks above the content. */
 .with-help {
   position: relative;
   display: grid;
@@ -381,7 +384,7 @@ th[title],
   align-items: start;
 }
 .with-help.open {
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 380px);
+  grid-template-columns: minmax(0, 3fr) minmax(320px, 2fr);
 }
 .with-help > .help-toggle {
   position: absolute;
@@ -468,6 +471,113 @@ th[title],
   }
   .help-body dd {
     margin-bottom: 8px;
+  }
+}
+
+/* A long page with a jump menu on the left (Help). The menu stays in view while the sections scroll past and marks the
+   one being read; on a narrow screen it becomes a row of buttons above the page. */
+.docs {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
+}
+.docs-main section:focus {
+  outline: none;
+}
+.page-nav {
+  position: sticky;
+  top: 16px;
+}
+.page-nav h2 {
+  margin-bottom: 8px;
+  padding-left: 14px;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.page-nav ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--border);
+}
+.page-nav button {
+  display: block;
+  width: 100%;
+  margin-left: -1px;
+  padding: 7px 14px;
+  border: 0;
+  border-left: 2px solid transparent;
+  border-radius: 0 8px 8px 0;
+  background: transparent;
+  color: var(--ink-2);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.page-nav button:hover {
+  background: var(--accent-wash);
+  color: var(--ink);
+}
+.page-nav button[aria-current='location'] {
+  border-left-color: var(--accent);
+  background: var(--accent-wash);
+  color: var(--ink);
+  font-weight: 600;
+}
+@media (max-width: 860px) {
+  .docs {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  .page-nav {
+    position: static;
+  }
+  .page-nav ul {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px;
+    border-left: 0;
+  }
+  .page-nav button {
+    width: auto;
+    margin-left: 0;
+    border: 1px solid var(--border-strong);
+    border-radius: 999px;
+  }
+  .page-nav button[aria-current='location'] {
+    border-color: var(--accent);
+  }
+}
+
+/* Add server: the hub address is known, so it is shown rather than asked for; "Other ways" separates its options. */
+.hub-known {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 36px;
+  overflow-wrap: anywhere;
+}
+.other-way {
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+
+/* Add check: the type is short, so it sits beside the field it decides (address, host, service, drive). */
+.type-target {
+  display: grid;
+  grid-template-columns: minmax(120px, 160px) minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+@media (max-width: 520px) {
+  .type-target {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -585,6 +695,9 @@ input[type='checkbox'] {
   color: var(--ink-2);
   cursor: pointer;
   min-height: 32px;
+}
+.stack > .segmented {
+  align-self: flex-start;
 }
 .segmented button:last-child {
   border-right: 0;
@@ -989,8 +1102,8 @@ table.data tr.detail > td {
 }
 
 @media (max-width: 640px) {
-  main {
-    padding-top: 16px;
+  main.container {
+    padding-top: 20px;
   }
   .hero {
     padding: 16px;

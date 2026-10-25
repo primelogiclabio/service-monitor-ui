@@ -5,15 +5,17 @@
 
   /**
    * The commands for each platform in `order` (likelier first), filled in with `token` (a join key or a one-time
-   * token) or `placeholder` until there is one. `mode` 'new' installs the agent; 'existing' registers an agent that
-   * is already installed and restarts its service, which differs between Linux and macOS. `localHub` offers the
-   * hub's own address for its own machine. A join key that pins a cluster (`fixedCluster`) decides it, so the
-   * cluster box is left out.
+   * token) or `placeholder` until there is one; Copy waits for the token. `mode` 'new' installs the agent; 'existing'
+   * registers an agent that is already installed and restarts its service, which differs between Linux and macOS.
+   * The hub address is known from this page, so it is only shown, with a way to change it; `localHub` offers the hub's
+   * own address for its own machine. `hub` and `cluster` are bindable so a parent can keep them when the mode changes.
+   * A join key that pins a cluster (`fixedCluster`) decides it, so the cluster box is left out.
    */
   let {
     token = '',
     placeholder = '<token>',
-    hub: initialHub = '',
+    hub = $bindable(''),
+    cluster = $bindable(''),
     localHub = '',
     order = ['windows', 'unix'],
     mode = 'new',
@@ -21,10 +23,7 @@
     fixedCluster = null,
   } = $props();
 
-  // Editable copies: starting values are read once, when the commands are first shown.
-  const start = (() => ({ hub: initialHub }))();
-  let hub = $state(start.hub);
-  let cluster = $state('');
+  let changingHub = $state(false);
 
   const existing = $derived(mode === 'existing');
   const commands = $derived(
@@ -49,18 +48,6 @@
 </script>
 
 <div class="form-grid">
-  <div class="field">
-    <div class="label-row"><label for="{idPrefix}-hub">Hub address the server will use</label><Tip field="enroll.hub" /></div>
-    <input id="{idPrefix}-hub" type="text" bind:value={hub} autocomplete="off" spellcheck="false" />
-    <span class="hint">
-      Use the hub's internal address if this page is reached through a load balancer.
-      {#if localHub && hub.trim() !== localHub}
-        <button class="btn small ghost inline-link" type="button" onclick={() => (hub = localHub)}>
-          Installing on the hub's own machine? Use {localHub}
-        </button>
-      {/if}
-    </span>
-  </div>
   {#if fixedCluster}
     <div class="field">
       <span class="label">Cluster</span>
@@ -72,6 +59,26 @@
       <input id="{idPrefix}-cluster" type="text" bind:value={cluster} placeholder="prod" autocomplete="off" />
     </div>
   {/if}
+  <div class="field">
+    {#if changingHub || !hub.trim()}
+      <div class="label-row"><label for="{idPrefix}-hub">Hub address the server will use</label><Tip field="enroll.hub" /></div>
+      <input id="{idPrefix}-hub" type="text" bind:value={hub} autocomplete="off" spellcheck="false" />
+      <span class="hint">
+        Use the hub's internal address if this page is reached through a load balancer.
+        {#if localHub && hub.trim() !== localHub}
+          <button class="btn small ghost inline-link" type="button" onclick={() => (hub = localHub)}>
+            Installing on the hub's own machine? Use {localHub}
+          </button>
+        {/if}
+      </span>
+    {:else}
+      <div class="label-row"><span class="label">Hub address the server will use</span><Tip field="enroll.hub" /></div>
+      <p class="hub-known">
+        <code>{hub}</code>
+        <button class="btn small ghost inline-link" type="button" onclick={() => (changingHub = true)}>Change</button>
+      </p>
+    {/if}
+  </div>
 </div>
 
 {#each platforms as os (os)}
@@ -79,7 +86,7 @@
     <span class="label">{labels[os]}</span>
     <div class="copybox">
       <pre>{commands[os]}</pre>
-      <button class="btn" type="button" onclick={() => copy(commands[os])}>Copy</button>
+      <button class="btn" type="button" disabled={!token} onclick={() => copy(commands[os])}>Copy</button>
     </div>
   </div>
 {/each}
