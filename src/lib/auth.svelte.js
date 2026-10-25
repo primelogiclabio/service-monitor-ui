@@ -31,6 +31,24 @@ export const auth = $state({
 
 let api = null;
 
+/**
+ * Which screen the page shows: 'loading', 'gate' (behind a proxy, not signed in), 'login' or 'app'. While the page is
+ * being sent to the proxy's sign-in page it stays on 'loading', so no sign-in screen flashes up before the redirect.
+ */
+export function screen(ready) {
+  if (!ready || auth.redirecting) return 'loading';
+  if (auth.signedIn) return 'app';
+  return auth.mode === 'proxy' ? 'gate' : 'login';
+}
+
+/**
+ * The browser brought this page back from its cache (the Back button from the sign-in page): the redirect it was
+ * waiting for is over, so show the gate with its Sign in button instead of "Loading…" for good.
+ */
+export function redirectEnded() {
+  auth.redirecting = false;
+}
+
 /** The API client for the current session, or null when signed out. */
 export function getApi() {
   return api;

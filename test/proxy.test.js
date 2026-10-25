@@ -84,6 +84,41 @@ describe('restore behind a sign-in proxy', () => {
     expect(auth.gate).toBe('signin');
   });
 
+  it('no sign-in screen shows before the redirect; it does when the redirect is refused', async () => {
+    routes['/web-api/v1/me'] = noSession;
+    const { screen, restore } = await fresh();
+    expect(screen(false)).toBe('loading');
+
+    await restore(); // sent to the proxy's sign-in page
+    expect(screen(true)).toBe('loading');
+
+    await restore(); // back without a session: the guard refuses a second redirect
+    expect(screen(true)).toBe('gate');
+  });
+
+  it('a page brought back from the cache after the redirect shows the gate, not "Loading…" for good', async () => {
+    routes['/web-api/v1/me'] = noSession;
+    const { redirectEnded, restore, screen } = await fresh();
+    await restore();
+    expect(screen(true)).toBe('loading');
+    redirectEnded();
+    expect(screen(true)).toBe('gate');
+  });
+
+  it('the other screens: the dashboard when signed in, the forms when the proxy is not used', async () => {
+    routes['/web-api/v1/me'] = me();
+    routes['/web-api/v1/hub'] = hub;
+    const signedIn = await fresh();
+    await signedIn.restore();
+    expect(signedIn.screen(true)).toBe('app');
+
+    vi.resetModules();
+    routes['/web-api/v1/me'] = () => reply(503, { message: 'down' });
+    const fallback = await fresh();
+    await fallback.restore();
+    expect(fallback.screen(true)).toBe('login');
+  });
+
   it("the gate's button goes to sign in even right after a redirect", async () => {
     routes['/web-api/v1/me'] = noSession;
     const { redirectToSignIn, restore } = await fresh();

@@ -8,7 +8,7 @@
     <div>
       <h1>Service Monitor</h1>
       {#if auth.gate === 'signin'}
-        <p class="secondary">{auth.redirecting ? 'Taking you to the sign-in page…' : 'Sign in to continue.'}</p>
+        <p class="secondary">Sign in to continue.</p>
       {:else if auth.gate === 'forbidden'}
         <p class="secondary">You are signed in, but this account may not use the dashboard. Only administrators can.</p>
       {:else if auth.gate === 'signedout'}
