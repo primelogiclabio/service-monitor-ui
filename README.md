@@ -4,10 +4,10 @@ The web dashboard for [service-monitor](https://github.com/primelogiclabio/servi
 
 ## What it shows
 
-- **Overview:** one headline ("All systems operational" / "1 check down, 1 server offline"), summary tiles, and servers grouped by cluster with their problems. Filter by cluster, text, or problems only.
+- **Dashboard:** one headline ("All systems operational" / "1 check down, 1 server offline"), summary tiles, and servers grouped by cluster with their problems. Filter by cluster, text, or problems only. Admins get an **Add server** button here.
 - **Server:** status, OS, agent version, last seen, and every check. Open a check to see its history as a chart (CPU, memory and disk with warning and critical lines; response time for HTTP, TCP and ping) or a status strip for services. Each chart has a table view and a 1h / 6h / 24h / 7d range.
-- **Checks:** every check across servers and the hub, with filters. Admins can add, edit, enable, disable, run and delete checks.
-- **Add server:** servers register themselves, so the page just gives you the command for the agent side. Choose **Install a new agent** (copy `svcmon` there and run the install command) or **Enroll an installed agent** (register an agent that is already installed with this hub and restart its service; the enroll and restart lines are given for Windows, Linux and macOS). The hub address and a join key are already in the command: the dashboard makes a join key for an admin when the page opens (it works for 24 hours and any number of servers, and "Make a new one" replaces it). The hub address can be changed (with a link to the local address for the hub's own machine) and a cluster can be set, which is optional. Then the server appears on the Overview; add checks. Under "Other ways": paste a join key you already have, create one that lasts longer (shown once; optionally only into one cluster and with an expiry; the hub's join keys are listed with how many servers each registered, and can be revoked), or make a one-time token for a single server (1 hour by default, 1 day at most).
+- **Monitors:** every check across servers and the hub, with filters for cluster, type, state (problems or disabled) and text. Admins can add, edit, enable, disable, run and delete checks. A check that is down also gets a light red row, besides its red X.
+- **Add server** (from the Dashboard): servers register themselves, so the page just gives you the command for the agent side. Choose **Install a new agent** (copy `svcmon` there and run the install command) or **Enroll an installed agent** (register an agent that is already installed with this hub and restart its service; the enroll and restart lines are given for Windows, Linux and macOS). The hub address and a join key are already in the command: the dashboard makes a join key for an admin when the page opens (it works for 24 hours and any number of servers, and "Make a new one" replaces it). The hub address can be changed (with a link to the local address for the hub's own machine) and a cluster can be set, which is optional. Then the server appears on the Dashboard; add checks. Under "Other ways": paste a join key you already have, create one that lasts longer (shown once; optionally only into one cluster and with an expiry; the hub's join keys are listed with how many servers each registered, and can be revoked), or make a one-time token for a single server (1 hour by default, 1 day at most).
 - **Tokens:** create and revoke API tokens.
 - **Help:** a Help button at the top right of Add server and of the Add check dialog opens a panel on the right that explains what to fill in (it closes from the right too, and remembers whether you left it open). The small **i** beside a field explains that field: hover over it, focus it with the keyboard, or click or tap it to keep it open, and press Escape to close it. Buttons and column headings have hover text, and the Help page in the top bar collects the topics, with a menu on the left that jumps between them and marks the one being read.
 
@@ -65,7 +65,7 @@ The hub's setting names are described in its [README](https://github.com/primelo
 ```text
 src/lib/         api client, formatting, routing, auth/status/theme state
 src/components/  status badge, charts, check table, forms, dialogs
-src/views/       overview, server, checks, add server, tokens, sign-in
+src/views/       dashboard (overview.svelte), server, monitors (checks.svelte), add server, tokens, sign-in
 scripts/         demo data seeder
 test/            unit tests
 ```
