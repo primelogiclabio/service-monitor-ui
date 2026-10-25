@@ -43,6 +43,34 @@ export function isDown(check) {
   return Boolean(check?.enabled) && check.status === 'DOWN';
 }
 
+/**
+ * What the hub allows for a check, given where it is defined. A check an agent declares in its checks.json belongs to
+ * that file: the hub refuses to edit or delete it (the next sync would undo the change) except for its on/off switch,
+ * and one taken out of the file stays off until the agent declares it again. The hub answers 409 for each of these,
+ * so the dashboard does not offer what it already knows will be refused.
+ */
+export function declaredState(check) {
+  const declared = check?.source === 'AGENT';
+  const removed = declared && Boolean(check.removedFromFile);
+  let note = '';
+  if (removed) {
+    note =
+      "Removed from this server's checks.json, so it stays off until the agent declares it again. Delete it to clear its history, or put it back in the file.";
+  } else if (declared) {
+    note =
+      "Declared by this server's checks.json, so it is changed there (svcmon agent check add or rm on the server); an edit here would be undone at the next sync. You can still switch it off.";
+  }
+  return {
+    declared,
+    removed,
+    canEdit: !declared,
+    canDelete: !declared || removed,
+    canEnable: !removed,
+    tag: removed ? 'Removed from agent file' : declared ? 'Agent file' : '',
+    note,
+  };
+}
+
 /** The thresholds the agent applies when a check does not set its own. */
 export function defaultThresholds(type) {
   if (type === 'DISK') return { warn: 80, crit: 90 };

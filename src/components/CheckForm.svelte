@@ -5,7 +5,7 @@
   import Tip from './Tip.svelte';
   import { typeHelp } from '../lib/help.js';
 
-  let { servers = [], initial = null, presetServerId = '', busy = false, error = '', onsubmit, oncancel } = $props();
+  let { servers = [], initial = null, presetServerId = '', busy = false, error = '', locked = false, lockedNote = '', onsubmit, oncancel } = $props();
 
   // The form edits its own copy: starting values are read once, when the dialog opens.
   const start = (() => {
@@ -63,6 +63,7 @@
 
   function submit(e) {
     e.preventDefault();
+    if (locked) return;
     localError = '';
     if (!name.trim()) return (localError = 'Give the check a name.');
     if (needsTarget && !target.trim()) return (localError = `${help?.label ?? 'Target'} is required.`);
@@ -111,15 +112,16 @@
 
 {#snippet formBody()}
 <form onsubmit={submit} class="stack" novalidate>
+  {#if locked}<div class="banner">{lockedNote}</div>{/if}
   <div class="field">
     <div class="label-row"><label for="cf-name">Name</label><Tip field="check.name" /></div>
-    <input id="cf-name" type="text" bind:value={name} maxlength="200" autocomplete="off" />
+    <input id="cf-name" type="text" bind:value={name} maxlength="200" autocomplete="off" disabled={locked} />
   </div>
 
   <div class="type-target">
     <div class="field">
       <div class="label-row"><label for="cf-type">Type</label><Tip field="check.type" /></div>
-      <select id="cf-type" value={type} onchange={changeType} disabled={edit}>
+      <select id="cf-type" value={type} onchange={changeType} disabled={edit || locked}>
         {#each CHECK_TYPES as t}<option value={t}>{t}</option>{/each}
       </select>
       {#if agentOnly}<span class="hint">Runs on the server's agent.</span>{/if}
@@ -130,7 +132,7 @@
           <label for="cf-target">{help?.label ?? 'Target'}</label>
           <Tip text={typeHelp(type)} label="{type} checks" />
         </div>
-        <input id="cf-target" type="text" bind:value={target} placeholder={help?.placeholder} autocomplete="off" spellcheck="false" />
+        <input id="cf-target" type="text" bind:value={target} placeholder={help?.placeholder} autocomplete="off" spellcheck="false" disabled={locked} />
         {#if help?.hint}<span class="hint">{help.hint}</span>{/if}
       </div>
     {/if}
@@ -139,7 +141,7 @@
   <div class="form-grid">
     <div class="field">
       <div class="label-row"><label for="cf-server">Server{needsServer ? '' : ' (optional)'}</label><Tip field="check.server" /></div>
-      <select id="cf-server" bind:value={serverId}>
+      <select id="cf-server" bind:value={serverId} disabled={locked}>
         <option value="">{needsServer ? 'Choose a server' : 'None (hub-level check)'}</option>
         {#each servers as s (s.id)}<option value={s.id}>{s.name}</option>{/each}
       </select>
@@ -147,7 +149,7 @@
     {#if !agentOnly}
       <div class="field">
         <div class="label-row"><label for="cf-run">Runs from</label><Tip field="check.runFrom" /></div>
-        <select id="cf-run" bind:value={runFrom}>
+        <select id="cf-run" bind:value={runFrom} disabled={locked}>
           <option value="HUB">The hub</option>
           <option value="AGENT">The server's agent</option>
         </select>
@@ -160,25 +162,25 @@
     <div class="form-grid">
       <div class="field">
         <div class="label-row"><label for="cf-status">Accepted status codes</label><Tip field="check.expectStatus" /></div>
-        <input id="cf-status" type="text" bind:value={expectStatus} placeholder="200-299" autocomplete="off" />
+        <input id="cf-status" type="text" bind:value={expectStatus} placeholder="200-299" autocomplete="off" disabled={locked} />
         <span class="hint">For example 200-299,301</span>
       </div>
       <div class="field">
         <div class="label-row"><label for="cf-keyword">Body must contain</label><Tip field="check.keyword" /></div>
-        <input id="cf-keyword" type="text" bind:value={keyword} autocomplete="off" />
+        <input id="cf-keyword" type="text" bind:value={keyword} autocomplete="off" disabled={locked} />
       </div>
       <div class="field">
         <div class="label-row"><label for="cf-cert">Warn before certificate expires (days)</label><Tip field="check.certWarnDays" /></div>
-        <input id="cf-cert" type="number" min="1" bind:value={certWarnDays} placeholder="14" />
+        <input id="cf-cert" type="number" min="1" bind:value={certWarnDays} placeholder="14" disabled={locked} />
       </div>
     </div>
     <div class="row" style="gap: 20px">
       <span class="check">
-        <label class="check"><input type="checkbox" bind:checked={followRedirects} /> Follow redirects</label>
+        <label class="check"><input type="checkbox" bind:checked={followRedirects} disabled={locked} /> Follow redirects</label>
         <Tip field="check.followRedirects" />
       </span>
       <span class="check">
-        <label class="check"><input type="checkbox" bind:checked={ignoreTls} /> Accept any TLS certificate</label>
+        <label class="check"><input type="checkbox" bind:checked={ignoreTls} disabled={locked} /> Accept any TLS certificate</label>
         <Tip field="check.ignoreTls" />
       </span>
     </div>
@@ -187,7 +189,7 @@
   {#if type === 'CONTAINER'}
     <div class="field">
       <div class="label-row"><label for="cf-socket">Runtime socket (optional)</label><Tip field="check.socket" /></div>
-      <input id="cf-socket" type="text" bind:value={socket} placeholder="/var/run/docker.sock" autocomplete="off" spellcheck="false" />
+      <input id="cf-socket" type="text" bind:value={socket} placeholder="/var/run/docker.sock" autocomplete="off" spellcheck="false" disabled={locked} />
       <span class="hint">Leave empty to find Docker or Podman on the server automatically.</span>
     </div>
   {/if}
@@ -196,11 +198,11 @@
     <div class="form-grid">
       <div class="field">
         <div class="label-row"><label for="cf-warn">Warning at (% used)</label><Tip field="check.warn" /></div>
-        <input id="cf-warn" type="number" min="0" max="100" step="any" bind:value={warn} placeholder={String(defaults?.warn ?? '')} />
+        <input id="cf-warn" type="number" min="0" max="100" step="any" bind:value={warn} placeholder={String(defaults?.warn ?? '')} disabled={locked} />
       </div>
       <div class="field">
         <div class="label-row"><label for="cf-crit">Down at (% used)</label><Tip field="check.crit" /></div>
-        <input id="cf-crit" type="number" min="0" max="100" step="any" bind:value={crit} placeholder={String(defaults?.crit ?? '')} />
+        <input id="cf-crit" type="number" min="0" max="100" step="any" bind:value={crit} placeholder={String(defaults?.crit ?? '')} disabled={locked} />
       </div>
     </div>
   {/if}
@@ -208,29 +210,29 @@
   <div class="form-grid">
     <div class="field">
       <div class="label-row"><label for="cf-interval">Every (seconds)</label><Tip field="check.interval" /></div>
-      <input id="cf-interval" type="number" min="5" bind:value={interval} oninput={() => (intervalTouched = true)} />
+      <input id="cf-interval" type="number" min="5" bind:value={interval} oninput={() => (intervalTouched = true)} disabled={locked} />
     </div>
     <div class="field">
       <div class="label-row"><label for="cf-timeout">Timeout (ms)</label><Tip field="check.timeout" /></div>
-      <input id="cf-timeout" type="number" min="100" step="100" bind:value={timeoutMs} />
+      <input id="cf-timeout" type="number" min="100" step="100" bind:value={timeoutMs} disabled={locked} />
     </div>
     <div class="field">
       <div class="label-row"><label for="cf-failures">Failures before down</label><Tip field="check.failures" /></div>
-      <input id="cf-failures" type="number" min="1" max="20" bind:value={failures} />
+      <input id="cf-failures" type="number" min="1" max="20" bind:value={failures} disabled={locked} />
       <span class="hint">Avoids alerts for a single dropped packet.</span>
     </div>
   </div>
 
   <span class="check">
-    <label class="check"><input type="checkbox" bind:checked={enabled} /> Enabled</label>
+    <label class="check"><input type="checkbox" bind:checked={enabled} disabled={locked} /> Enabled</label>
     <Tip field="check.enabled" />
   </span>
 
   {#if localError || error}<p class="form-error" role="alert">{localError || error}</p>{/if}
 
   <div class="actions">
-    <button class="btn" type="button" onclick={oncancel} disabled={busy}>Cancel</button>
-    <button class="btn primary" type="submit" disabled={busy}>{edit ? 'Save changes' : 'Add check'}</button>
+    <button class="btn" type="button" onclick={oncancel} disabled={busy}>{locked ? 'Close' : 'Cancel'}</button>
+    {#if !locked}<button class="btn primary" type="submit" disabled={busy}>{edit ? 'Save changes' : 'Add check'}</button>{/if}
   </div>
 </form>
 {/snippet}

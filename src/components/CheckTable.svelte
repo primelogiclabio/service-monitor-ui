@@ -1,6 +1,6 @@
 <script>
   import { ago, cleanMessage, reading } from '../lib/format.js';
-  import { isDown } from '../lib/checks.js';
+  import { declaredState, isDown } from '../lib/checks.js';
   import StatusBadge from './StatusBadge.svelte';
   import CheckDetail from './CheckDetail.svelte';
 
@@ -37,6 +37,7 @@
       </thead>
       <tbody>
         {#each checks as c (c.id)}
+          {@const ds = declaredState(c)}
           <tr class:down={isDown(c)}>
             <td><StatusBadge status={c.enabled ? c.status : 'OFF'} /></td>
             <td>{c.type}</td>
@@ -45,6 +46,7 @@
               <button class="expander" type="button" aria-expanded={open.has(c.id)} onclick={() => toggle(c.id)}>
                 {open.has(c.id) ? '▾' : '▸'} {c.name}
               </button>
+              {#if ds.declared}<span class="source-tag" title={ds.note}>{ds.tag}</span>{/if}
               {#if c.target}<span class="target">{c.target}</span>{/if}
             </td>
             <td class="num">{reading(c)}</td>

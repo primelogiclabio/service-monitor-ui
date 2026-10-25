@@ -26,7 +26,7 @@ export const HELP = {
   addCheck: {
     title: 'Adding a check',
     summary:
-      'A check is one thing that is tested on a schedule: a web address that answers, a port that is open, a host that replies, a service or container that is running, or CPU, memory or disk staying under a limit. Nothing is monitored until you add it.',
+      'A check is one thing that is tested on a schedule: a web address that answers, a port that is open, a host that replies, a service or container that is running, or CPU, memory or disk staying under a limit. Nothing is monitored until someone adds it, here or in the server\'s own checks.json (a check from that file is tagged "Agent file" and is changed there, not here).',
     steps: [
       'Give it a name you will recognise in an alert.',
       'Choose the Type. The field beside it changes to match: fill in what to test (the address, host and port, service or container name, or drive).',
@@ -38,7 +38,7 @@ export const HELP = {
       { name: 'TCP', text: 'Opens a connection to `host:port`, for example `db01:5432`. UP when it connects.' },
       { name: 'PING', text: 'Sends a ping to a host name or address. UP when it answers.' },
       { name: 'SERVICE', text: 'A Windows service, systemd unit or launchd label, by its service name. List what exists on the server with `svcmon agent services`.' },
-      { name: 'CONTAINER', text: 'A Docker or Podman container, by its name. UP when it is running, and healthy if it has a health check; WARN while its health check is starting or it keeps restarting; DOWN when it is unhealthy, stopped or missing. List what exists on the server with `svcmon agent containers`. The agent reads the runtime\'s socket, so it needs root or the runtime\'s group. Linux and macOS.' },
+      { name: 'CONTAINER', text: 'A Docker or Podman container, by its name. UP when it is running, and healthy if it has a health check; WARN while its health check is starting or it keeps restarting; DOWN when it is unhealthy, stopped or missing. List what exists on the server with `svcmon agent containers`. The agent reads the runtime\'s socket, so it needs root or the runtime\'s group (on Windows it uses Docker Desktop\'s pipe). Linux, macOS and Windows.' },
       { name: 'CPU, MEMORY, DISK', text: 'Percent used. Warning and Down thresholds default to 85 and 95 for CPU and memory, 80 and 90 for disk. Disk needs the drive or mount point, such as `C:\\` or `/var`.' },
       { name: 'Runs from', text: 'Where the test starts. The hub tests from its own network; the server\'s agent tests from that server\'s side, which shows whether the server itself can reach something.' },
       { name: 'Every (seconds)', text: 'How often the check runs, from 5 seconds up.' },
