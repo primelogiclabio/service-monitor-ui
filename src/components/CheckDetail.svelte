@@ -4,7 +4,7 @@
   import { status } from '../lib/status.svelte.js';
   import { notify } from '../lib/notify.svelte.js';
   import { chartKind, rangeMs, toPoints, ago, fmtDateTime } from '../lib/format.js';
-  import { defToRequest, thresholdsFor } from '../lib/checks.js';
+  import { declaredState, defToRequest, thresholdsFor } from '../lib/checks.js';
   import MetricChart from './MetricChart.svelte';
   import StatusStrip from './StatusStrip.svelte';
   import Modal from './Modal.svelte';
@@ -23,6 +23,7 @@
   let busy = $state(false);
   let formError = $state('');
 
+  const lock = $derived(declaredState(check));
   const kind = $derived(chartKind(check.type));
   const points = $derived(kind ? toPoints(results, kind.field) : []);
   const limits = $derived(thresholdsFor(check.type, def?.config));
@@ -126,12 +127,16 @@
         {#if check.runFrom === 'HUB'}
           <button class="btn small" type="button" title="Run this check now and record the result" onclick={runNow} disabled={busy}>Run now</button>
         {/if}
-        <button class="btn small" type="button" title={check.enabled ? 'Stop running this check; its history is kept' : 'Start running this check again'} onclick={toggleEnabled} disabled={busy}>{check.enabled ? 'Disable' : 'Enable'}</button>
-        <button class="btn small" type="button" title="Change this check's settings" onclick={() => { formError = ''; editing = true; }} disabled={busy || !def}>Edit</button>
-        <button class="btn small danger" type="button" title="Delete this check and its history" onclick={() => (deleting = true)} disabled={busy}>Delete</button>
+        <button class="btn small" type="button" title={!lock.canEnable ? lock.note : check.enabled ? 'Stop running this check; its history is kept' : 'Start running this check again'} onclick={toggleEnabled} disabled={busy || !lock.canEnable}>{check.enabled ? 'Disable' : 'Enable'}</button>
+        <button class="btn small" type="button" title={lock.canEdit ? "Change this check's settings" : "See this check's settings; they are changed in the agent's checks.json"} onclick={() => { formError = ''; editing = true; }} disabled={busy || !def}>{lock.canEdit ? 'Edit' : 'View settings'}</button>
+        <button class="btn small danger" type="button" title={lock.canDelete ? 'Delete this check and its history' : "Declared by the agent's checks.json: take it out of the file first, then it can be deleted here"} onclick={() => (deleting = true)} disabled={busy || !lock.canDelete}>Delete</button>
       </div>
     {/if}
   </div>
+
+  {#if lock.declared}
+    <div class="banner">{lock.note}</div>
+  {/if}
 
   {#if loadError}
     <div class="banner error" role="alert">{loadError}</div>
@@ -150,8 +155,8 @@
 </div>
 
 {#if editing && def}
-  <Modal title="Edit check" onclose={() => (editing = false)}>
-    <CheckForm {servers} initial={def} {busy} error={formError} onsubmit={save} oncancel={() => (editing = false)} />
+  <Modal title={lock.canEdit ? 'Edit check' : 'Check settings'} onclose={() => (editing = false)}>
+    <CheckForm {servers} initial={def} {busy} error={formError} locked={!lock.canEdit} lockedNote={lock.note} onsubmit={save} oncancel={() => (editing = false)} />
   </Modal>
 {/if}
 

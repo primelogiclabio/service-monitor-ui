@@ -937,6 +937,17 @@ table.data .target {
   font-size: 0.8125rem;
   overflow-wrap: anywhere;
 }
+/* A check defined by the server's own checks.json rather than in the hub. */
+table.data .source-tag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 0 6px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
 table.data tr.detail > td {
   background: var(--page);
   padding: 16px;
