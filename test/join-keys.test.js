@@ -48,3 +48,15 @@ describe('join key choices and names', () => {
     expect(text).toContain('revoke');
   });
 });
+
+describe('the Add server guide', () => {
+  it('walks through the key, a new or an existing agent, then checks', () => {
+    const [key, fresh, existing, appear] = HELP.addServer.steps;
+    expect(key).toContain('join key');
+    expect(fresh).toContain('install command');
+    expect(fresh).toContain('elevated PowerShell');
+    expect(existing).toContain('already installed');
+    expect(existing).toContain('restart');
+    expect(appear).toContain('Add check');
+  });
+});

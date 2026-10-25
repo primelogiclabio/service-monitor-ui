@@ -3,7 +3,6 @@ import { HELP, parts } from '../src/lib/help.js';
 import { CHECK_TYPES } from '../src/lib/format.js';
 import { defaultThresholds } from '../src/lib/checks.js';
 import {
-  THIS_SERVER_TTL_MINUTES,
   TTL_CHOICES,
   guessPlatform,
   installArgs,
@@ -67,7 +66,6 @@ describe('token lifetime choices', () => {
       expect(c.minutes).toBeLessThanOrEqual(1440);
     }
     expect(TTL_CHOICES.map((c) => c.minutes)).toContain(60);
-    expect(THIS_SERVER_TTL_MINUTES).toBeLessThan(60);
   });
 });
 
@@ -114,11 +112,35 @@ describe('install commands', () => {
 
   it('show placeholders until there is something to fill in', () => {
     expect(installArgs({ hub: '', token: '' })).toBe('--hub <hub address> --token <token>');
+    expect(installArgs({ hub: 'http://hub:8080', token: '  ', placeholder: '<join key>' })).toBe('--hub http://hub:8080 --token <join key>');
+    expect(installArgs({ hub: 'http://hub:8080', token: ' svm_j_x ', placeholder: '<join key>' })).toBe('--hub http://hub:8080 --token svm_j_x');
   });
 
   it('differ only by how each system runs a program', () => {
     const c = installCommands({ hub: 'http://hub:8080', token: 'svm_e_abc' });
     expect(c.windows).toBe(String.raw`.\svcmon.exe agent install --hub http://hub:8080 --token svm_e_abc`);
     expect(c.unix).toBe('sudo ./svcmon agent install --hub http://hub:8080 --token svm_e_abc');
+  });
+});
+
+describe('commands for an agent that is already installed', () => {
+  it('register it with enroll and restart its service, per system', async () => {
+    const { reconnectCommands, AGENT_SERVICE } = await import('../src/lib/enroll.js');
+    const c = reconnectCommands({ hub: 'http://hub:8080', token: 'svm_j_k', placeholder: '<join key>' });
+    expect(c.windows.split('\n')).toEqual([String.raw`.\svcmon.exe agent enroll --hub http://hub:8080 --token svm_j_k`, 'Restart-Service svcmon-agent']);
+    expect(c.linux.split('\n')).toEqual(['sudo ./svcmon agent enroll --hub http://hub:8080 --token svm_j_k', 'sudo systemctl restart svcmon-agent']);
+    expect(c.macos.split('\n')[1]).toBe(`sudo launchctl kickstart -k system/${AGENT_SERVICE.macos}`);
+    for (const lines of Object.values(c)) expect(lines).not.toContain('agent install');
+  });
+
+  it('use the same service names the agent installs', async () => {
+    // From the agent's osservice package: Name = "svcmon-agent"; the macOS launchd label io.primelogiclab.svcmon.agent.
+    const { AGENT_SERVICE } = await import('../src/lib/enroll.js');
+    expect(AGENT_SERVICE).toEqual({ windows: 'svcmon-agent', linux: 'svcmon-agent', macos: 'io.primelogiclab.svcmon.agent' });
+  });
+
+  it('show the placeholder until a key is chosen', async () => {
+    const { reconnectCommands } = await import('../src/lib/enroll.js');
+    expect(reconnectCommands({ hub: 'http://hub:8080', token: '', placeholder: '<join key>' }).linux).toContain('--token <join key>');
   });
 });
