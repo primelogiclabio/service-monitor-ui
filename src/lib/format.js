@@ -136,8 +136,8 @@ export function hexToRgba(hex, alpha) {
 export function chartKind(type) {
   if (type === 'CPU' || type === 'MEMORY' || type === 'DISK') return { field: 'value', unit: '%' };
   if (type === 'HTTP' || type === 'TCP' || type === 'PING') return { field: 'latencyMs', unit: 'ms' };
-  return null; // SERVICE and anything else: a status strip instead of a chart
+  return null; // SERVICE, CONTAINER and anything else: a status strip instead of a chart
 }
 
-export const AGENT_ONLY_TYPES = ['SERVICE', 'CPU', 'MEMORY', 'DISK'];
-export const CHECK_TYPES = ['HTTP', 'TCP', 'PING', 'SERVICE', 'CPU', 'MEMORY', 'DISK'];
+export const AGENT_ONLY_TYPES = ['SERVICE', 'CONTAINER', 'CPU', 'MEMORY', 'DISK'];
+export const CHECK_TYPES = ['HTTP', 'TCP', 'PING', 'SERVICE', 'CONTAINER', 'CPU', 'MEMORY', 'DISK'];

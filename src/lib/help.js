@@ -26,11 +26,11 @@ export const HELP = {
   addCheck: {
     title: 'Adding a check',
     summary:
-      'A check is one thing that is tested on a schedule: a web address that answers, a port that is open, a host that replies, a service that is running, or CPU, memory or disk staying under a limit. Nothing is monitored until you add it.',
+      'A check is one thing that is tested on a schedule: a web address that answers, a port that is open, a host that replies, a service or container that is running, or CPU, memory or disk staying under a limit. Nothing is monitored until you add it.',
     steps: [
       'Give it a name you will recognise in an alert.',
-      'Choose the Type. The field beside it changes to match: fill in what to test (the address, host and port, service name or drive).',
-      'CPU, memory, disk and service checks belong to a server and run on its agent, so choose the server. HTTP, TCP and ping run from the hub unless you choose "The server\'s agent".',
+      'Choose the Type. The field beside it changes to match: fill in what to test (the address, host and port, service or container name, or drive).',
+      'CPU, memory, disk, service and container checks belong to a server and run on its agent, so choose the server. HTTP, TCP and ping run from the hub unless you choose "The server\'s agent".',
       'The timing defaults suit most checks. Press Add check; its status appears within one interval.',
     ],
     fields: [
@@ -38,6 +38,7 @@ export const HELP = {
       { name: 'TCP', text: 'Opens a connection to `host:port`, for example `db01:5432`. UP when it connects.' },
       { name: 'PING', text: 'Sends a ping to a host name or address. UP when it answers.' },
       { name: 'SERVICE', text: 'A Windows service, systemd unit or launchd label, by its service name. List what exists on the server with `svcmon agent services`.' },
+      { name: 'CONTAINER', text: 'A Docker or Podman container, by its name. UP when it is running, and healthy if it has a health check; WARN while its health check is starting or it keeps restarting; DOWN when it is unhealthy, stopped or missing. List what exists on the server with `svcmon agent containers`. The agent reads the runtime\'s socket, so it needs root or the runtime\'s group. Linux and macOS.' },
       { name: 'CPU, MEMORY, DISK', text: 'Percent used. Warning and Down thresholds default to 85 and 95 for CPU and memory, 80 and 90 for disk. Disk needs the drive or mount point, such as `C:\\` or `/var`.' },
       { name: 'Runs from', text: 'Where the test starts. The hub tests from its own network; the server\'s agent tests from that server\'s side, which shows whether the server itself can reach something.' },
       { name: 'Every (seconds)', text: 'How often the check runs, from 5 seconds up.' },
@@ -68,12 +69,12 @@ export const HELP_SECTIONS = [
 export const FIELD_HELP = {
   'check.type': {
     label: 'Type',
-    text: "What to test. HTTP, TCP and PING can run from the hub; SERVICE, CPU, MEMORY and DISK always run on a server's agent.",
+    text: "What to test. HTTP, TCP and PING can run from the hub; SERVICE, CONTAINER, CPU, MEMORY and DISK always run on a server's agent.",
   },
   'check.name': { label: 'Name', text: 'How the check is listed on the dashboard and named in alerts.' },
   'check.server': {
     label: 'Server',
-    text: 'The server this check belongs to. Required for SERVICE, CPU, MEMORY and DISK checks and whenever the check runs from an agent. Leave it empty for a check the hub runs on its own, such as a website.',
+    text: 'The server this check belongs to. Required for SERVICE, CONTAINER, CPU, MEMORY and DISK checks and whenever the check runs from an agent. Leave it empty for a check the hub runs on its own, such as a website.',
   },
   'check.runFrom': {
     label: 'Runs from',
@@ -98,6 +99,10 @@ export const FIELD_HELP = {
   'check.ignoreTls': {
     label: 'Accept any TLS certificate',
     text: 'Skips certificate and host name validation. Only for internal sites with a self-signed certificate; it also hides a genuine certificate problem.',
+  },
+  'check.socket': {
+    label: 'Runtime socket',
+    text: "Where Docker or Podman listens on the server, for example `/var/run/docker.sock`. Empty means the agent looks in the usual places (Docker's, and Podman's system and per-user sockets). Set it only when the runtime is somewhere unusual.",
   },
   'check.warn': {
     label: 'Warning at',

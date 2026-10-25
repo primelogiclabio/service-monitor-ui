@@ -66,5 +66,10 @@ export const TARGET_HELP = {
     placeholder: 'W3SVC',
     hint: 'Windows service name, systemd unit (nginx.service) or launchd label. List them on the server with: svcmon agent services',
   },
+  CONTAINER: {
+    label: 'Container name',
+    placeholder: 'web',
+    hint: 'The name Docker or Podman shows for it. List them on the server with: svcmon agent containers',
+  },
   DISK: { label: 'Volume or path', placeholder: 'C:\\  or  /var', hint: 'The drive letter or mount point to watch' },
 };
