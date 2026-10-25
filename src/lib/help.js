@@ -11,13 +11,14 @@ export const HELP = {
     summary:
       'A server is a machine running the small `svcmon` agent. The agent connects out to the hub, so the server needs no open ports. Enrolling it takes one command.',
     steps: [
-      'Create a one-time token here. Use "This server" if the machine is the one the hub runs on, otherwise fill in the second form.',
+      'Create a token here. Use "This server" for the machine the hub runs on, a join key for many servers (one command for all of them), or a one-time token for a single server.',
       'Copy the command and run it on the server, from the folder that holds `svcmon`: in an elevated PowerShell on Windows, with `sudo` on Linux or macOS.',
       'The server shows up on the Overview as soon as it connects.',
       'Nothing is monitored until you add checks for it: open the server and choose Add check.',
     ],
     notes: [
       'The token works once and then expires (after 1 hour unless you choose another time, 1 day at most). It lets a machine join your hub, so it should not stay valid if it is lost or forgotten. It is shown only when created; if you lose it or it is used, create another. Unused tokens can be revoked on the Tokens page.',
+      'A join key is reusable: the same command registers any number of servers until you revoke it, and it can put them all in one cluster. Anyone holding it can add servers, so keep it like a password. Revoking it does not affect servers it already registered.',
       'Enrolling gives the server its own permanent credential, kept in `agent.json` on that server. You never handle it, and the one-time token is no longer needed afterwards.',
       'If this page is reached through a load balancer, give the server the hub\'s internal address instead.',
       'The `svcmon` program is one file. Build it as described in the README ("Build the agent and CLI") and copy it to the server.',
@@ -129,6 +130,18 @@ export const FIELD_HELP = {
   'enroll.cluster': {
     label: 'Cluster',
     text: 'A group name such as prod or staging; the Overview groups servers by it. Optional, and it can be changed later with Rename or move.',
+  },
+  'joinKey.name': {
+    label: 'Join key name',
+    text: 'What the key is for, for example the group of servers it will add. Shown in the list so you know which one to revoke.',
+  },
+  'joinKey.cluster': {
+    label: 'Join key cluster',
+    text: 'If set, every server registered with this key goes in this cluster, and a server that asks for another one is refused. Leave empty to let each server choose.',
+  },
+  'joinKey.expiry': {
+    label: 'Stops working',
+    text: 'A join key works until you revoke it unless you pick a date here. Servers it registered keep working either way.',
   },
   'token.name': {
     label: 'What it is for',

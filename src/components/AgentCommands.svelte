@@ -4,8 +4,13 @@
   import { installCommands } from '../lib/enroll.js';
   import Tip from './Tip.svelte';
 
-  /** The install command for a freshly issued enrollment token, for the platforms in `order` (likelier first). */
-  let { issued, hub: initialHub = '', order = ['windows', 'unix'], idPrefix = 'ac' } = $props();
+  /**
+   * The install command for a freshly issued enrollment token or join key (`kind`), for the platforms in `order`
+   * (likelier first). A join key that names a cluster decides it, so the cluster box is left out.
+   */
+  let { issued, hub: initialHub = '', order = ['windows', 'unix'], idPrefix = 'ac', kind = 'enroll' } = $props();
+
+  const join = kind === 'join';
 
   // Editable copies: starting values are read once, when the token is shown.
   const start = (() => ({ hub: initialHub }))();
@@ -26,8 +31,14 @@
 </script>
 
 <div class="banner warn">
-  This token is shown only now{issued.expiresAt ? ` and expires ${fmtDateTime(issued.expiresAt)}` : ''}. It works once; if it is
-  lost or used, create another.
+  {#if join}
+    This join key is shown only now. It works on any number of servers until you revoke it{issued.expiresAt
+      ? ` or until ${fmtDateTime(issued.expiresAt)}`
+      : ''}{issued.cluster ? `, and puts them in cluster ${issued.cluster}` : ''}. Keep it like a password.
+  {:else}
+    This token is shown only now{issued.expiresAt ? ` and expires ${fmtDateTime(issued.expiresAt)}` : ''}. It works once; if it is
+    lost or used, create another.
+  {/if}
 </div>
 <div class="form-grid">
   <div class="field">
@@ -35,10 +46,12 @@
     <input id="{idPrefix}-hub" type="text" bind:value={hub} autocomplete="off" spellcheck="false" />
     <span class="hint">Use the hub's internal address if this page is reached through a load balancer.</span>
   </div>
-  <div class="field">
-    <div class="label-row"><label for="{idPrefix}-cluster">Cluster (optional)</label><Tip field="enroll.cluster" /></div>
-    <input id="{idPrefix}-cluster" type="text" bind:value={cluster} placeholder="prod" autocomplete="off" />
-  </div>
+  {#if !(join && issued.cluster)}
+    <div class="field">
+      <div class="label-row"><label for="{idPrefix}-cluster">Cluster (optional)</label><Tip field="enroll.cluster" /></div>
+      <input id="{idPrefix}-cluster" type="text" bind:value={cluster} placeholder="prod" autocomplete="off" />
+    </div>
+  {/if}
 </div>
 
 {#each order as os (os)}
@@ -51,6 +64,6 @@
   </div>
 {/each}
 <p class="small muted">
-  The command registers the server, then installs and starts the agent as a system service. It must be run from the folder
+  {join ? 'The same command works on every server; on each one it' : 'The command'} registers the server, then installs and starts the agent as a system service. It must be run from the folder
   that holds <code>svcmon</code>. The server appears on the overview once it connects.
 </p>

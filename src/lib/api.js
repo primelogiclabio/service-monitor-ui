@@ -69,5 +69,8 @@ export function createApi({ base = '', token = '', fetchImpl, onUnauthorized } =
     createToken: (body) => request('POST', '/tokens', body),
     revokeToken: (tokenId) => request('DELETE', `/tokens/${id(tokenId)}`),
     enrollmentToken: (body) => request('POST', '/enrollment-tokens', body),
+    joinKeys: () => request('GET', '/join-keys'),
+    createJoinKey: (body) => request('POST', '/join-keys', body),
+    revokeJoinKey: (keyId) => request('DELETE', `/join-keys/${id(keyId)}`),
   };
 }

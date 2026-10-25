@@ -64,6 +64,11 @@ export function reading(check) {
   return '';
 }
 
+/** How a token's scope is shown. */
+export function scopeLabel(scope) {
+  return { ADMIN: 'Admin', READ: 'Read only', ENROLL: 'Enrollment (one use)', JOIN: 'Join key (reusable)', AGENT: 'Agent' }[scope] ?? scope;
+}
+
 export const STATUS_RANK = { UP: 0, UNKNOWN: 1, WARN: 2, DOWN: 3 };
 
 export function worst(statuses) {

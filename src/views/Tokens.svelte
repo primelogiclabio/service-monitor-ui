@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { auth, getApi } from '../lib/auth.svelte.js';
   import { notify } from '../lib/notify.svelte.js';
-  import { fmtDateTime } from '../lib/format.js';
+  import { fmtDateTime, scopeLabel } from '../lib/format.js';
   import ConfirmDialog from '../components/ConfirmDialog.svelte';
   import Tip from '../components/Tip.svelte';
 
@@ -117,7 +117,7 @@
               {#each tokens as t (t.id)}
                 <tr>
                   <td>{t.name}</td>
-                  <td>{t.scope === 'ENROLL' ? 'Enrollment (one use)' : t.scope === 'AGENT' ? 'Agent' : t.scope === 'ADMIN' ? 'Admin' : 'Read only'}</td>
+                  <td>{scopeLabel(t.scope)}</td>
                   <td class="hide-sm">{fmtDateTime(t.createdAt)}</td>
                   <td class="hide-sm">{t.expiresAt ? fmtDateTime(t.expiresAt) : '—'}</td>
                   <td>{t.usedAt ? fmtDateTime(t.usedAt) : '—'}</td>

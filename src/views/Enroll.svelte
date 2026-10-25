@@ -2,6 +2,7 @@
   import { auth, getApi } from '../lib/auth.svelte.js';
   import { TTL_CHOICES, THIS_SERVER_TTL_MINUTES, guessPlatform, pageIsOnTheHub, thisServerHub } from '../lib/enroll.js';
   import AgentCommands from '../components/AgentCommands.svelte';
+  import JoinKeys from '../components/JoinKeys.svelte';
   import WithHelp from '../components/WithHelp.svelte';
   import Tip from '../components/Tip.svelte';
 
@@ -81,8 +82,10 @@
       {/if}
     </section>
 
+    <JoinKeys hub={pageHub} />
+
     <form class="card stack" onsubmit={create}>
-      <h2>Another server: 1. Create a one-time token</h2>
+      <h2>One other server: 1. Create a one-time token</h2>
       <div class="form-grid">
         <div class="field">
           <div class="label-row"><label for="e-label">Label (optional)</label><Tip field="enroll.label" /></div>
