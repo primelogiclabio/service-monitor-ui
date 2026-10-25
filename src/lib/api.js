@@ -1,4 +1,6 @@
-// Client for the hub's REST API. Takes the hub base URL ('' for same origin) and a bearer token.
+// Client for the hub's REST API. Takes the hub base URL ('' for same origin) and a bearer token. Behind a sign-in
+// proxy there is no token: `proxy` ({ apiBase, headers }) sends the calls to the proxy's path on this site with its
+// marker headers, and the proxy adds the credential. The browser never holds one.
 
 export class ApiError extends Error {
   constructor(status, message) {
@@ -15,18 +17,19 @@ function query(params) {
   return s ? `?${s}` : '';
 }
 
-export function createApi({ base = '', token = '', fetchImpl, onUnauthorized } = {}) {
+export function createApi({ base = '', token = '', proxy = null, fetchImpl, onUnauthorized } = {}) {
   const send = fetchImpl ?? ((...args) => fetch(...args));
   const id = encodeURIComponent;
+  const root = proxy ? `${proxy.apiBase}/v1` : `${base}/api/v1`;
 
   async function request(method, path, body) {
-    const headers = { Accept: 'application/json' };
-    if (token) headers.Authorization = `Bearer ${token}`;
+    const headers = { Accept: 'application/json', ...(proxy?.headers ?? {}) };
+    if (token && !proxy) headers.Authorization = `Bearer ${token}`;
     if (body !== undefined) headers['Content-Type'] = 'application/json';
 
     let res;
     try {
-      res = await send(`${base}/api/v1${path}`, {
+      res = await send(`${root}${path}`, {
         method,
         headers,
         body: body === undefined ? undefined : JSON.stringify(body),
@@ -53,6 +56,7 @@ export function createApi({ base = '', token = '', fetchImpl, onUnauthorized } =
   return {
     request,
     hub: () => request('GET', '/hub'),
+    me: () => request('GET', '/me'),
     status: () => request('GET', '/status'),
     checks: () => request('GET', '/checks'),
     check: (checkId) => request('GET', `/checks/${id(checkId)}`),

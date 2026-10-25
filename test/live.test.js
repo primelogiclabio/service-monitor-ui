@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // The live module reads the sign-in state and the polling module reads the API client; both are faked so the
 // test drives just the live behaviour: when it connects, what it sends, and when it hands back to polling.
-const auth = { token: 'svm_a_good-token-0000000000000000000000', hubUrl: '' };
+const auth = { token: 'svm_a_good-token-0000000000000000000000', hubUrl: '', signedIn: true, mode: 'token' };
 let apiCalls;
 vi.mock('../src/lib/auth.svelte.js', () => ({
   auth,
@@ -56,6 +56,9 @@ beforeEach(() => {
   vi.stubGlobal('WebSocket', FakeSocket);
   vi.stubGlobal('location', { protocol: 'http:', host: 'hub.local:8080' });
   auth.hubUrl = '';
+  auth.signedIn = true;
+  auth.mode = 'token';
+  auth.token = 'svm_a_good-token-0000000000000000000000';
   toasts.length = 0;
 });
 
@@ -247,11 +250,32 @@ describe('live mode', () => {
     expect(live.state).toBe('off');
     expect(last().closedWith).toBe(1000);
 
-    auth.token = '';
+    auth.signedIn = false;
     toggleLive();
     expect(live.state).toBe('off');
     expect(FakeSocket.all).toHaveLength(1);
-    auth.token = 'svm_a_good-token-0000000000000000000000';
+  });
+
+  it('behind a sign-in proxy it sends no first frame, because the proxy adds the credential', async () => {
+    auth.mode = 'proxy';
+    auth.token = '';
+    startLive();
+    const ws = last();
+    expect(ws.url).toBe('ws://hub.local:8080/api/v1/live');
+
+    ws.open();
+    expect(ws.sent).toEqual([]);
+    ws.push(snapshot(1));
+    expect(live.state).toBe('on');
+    expect(status.data.generatedAt).toBe(1);
+
+    // The proxy's token ends and the hub says so with 1001: reconnect, not "refused".
+    ws.drop(1001);
+    expect(live.state).toBe('connecting');
+    expect(toasts).toHaveLength(0);
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(FakeSocket.all).toHaveLength(2);
+    expect(last().sent).toEqual([]);
   });
 
   it('stopping releases the page: no more listeners, no timers', async () => {

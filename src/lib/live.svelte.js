@@ -44,7 +44,7 @@ export function toggleLive() {
 }
 
 export function startLive() {
-  if (live.state !== 'off' || !auth.token) return;
+  if (live.state !== 'off' || !auth.signedIn) return;
   live.state = 'connecting';
   everConnected = false;
   retries = 0;
@@ -78,7 +78,10 @@ function connect() {
   retryTimer = null;
   const ws = new WebSocket(liveUrl(auth.hubUrl));
   socket = ws;
-  ws.onopen = () => ws.send(JSON.stringify({ type: 'auth', token: auth.token }));
+  // Behind a sign-in proxy the proxy adds the credential to the upgrade request, so there is no first frame.
+  ws.onopen = () => {
+    if (auth.mode !== 'proxy') ws.send(JSON.stringify({ type: 'auth', token: auth.token }));
+  };
   ws.onmessage = (event) => {
     lastFrameAt = Date.now();
     let frame;

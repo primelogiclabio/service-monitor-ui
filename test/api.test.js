@@ -16,6 +16,22 @@ describe('createApi', () => {
     expect(init.method).toBe('GET');
   });
 
+  it('behind a sign-in proxy it calls the proxy path with its marker headers and no token', async () => {
+    const fetchImpl = vi.fn(async () => reply(200, { name: 'alice', scope: 'ADMIN' }));
+    const proxy = { apiBase: '/web-api', headers: { 'X-PLL-Web': '1' } };
+    const api = createApi({ proxy, token: 'ignored', base: 'http://other:8080', fetchImpl });
+    expect(await api.me()).toEqual({ name: 'alice', scope: 'ADMIN' });
+    await api.createCheck({ name: 'x' });
+    const [url, init] = fetchImpl.mock.calls[0];
+    expect(url).toBe('/web-api/v1/me');
+    expect(init.headers['X-PLL-Web']).toBe('1');
+    expect(init.headers.Authorization).toBeUndefined();
+    const [postUrl, post] = fetchImpl.mock.calls[1];
+    expect(postUrl).toBe('/web-api/v1/checks');
+    expect(post.headers['X-PLL-Web']).toBe('1');
+    expect(post.headers['Content-Type']).toBe('application/json');
+  });
+
   it('sends JSON bodies with a content type', async () => {
     const fetchImpl = vi.fn(async () => reply(201, { id: 'c1' }));
     const api = createApi({ token: 't', fetchImpl });
