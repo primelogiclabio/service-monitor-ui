@@ -159,7 +159,7 @@ export const FIELD_HELP = {
   },
   'login.password': {
     label: 'Password',
-    text: "Your password on this hub. A new hub has the account `admin` with the password `admin`, which works only from the hub's internal network and has to be changed at the first sign-in; the same goes for a temporary password an administrator gives you. The password is sent to the hub and never stored in this browser.",
+    text: "Your password on this hub. A first or temporary password works only from the hub's internal network and has to be changed when you sign in with it. The password is sent to the hub and never stored in this browser.",
   },
   'password.new': {
     label: 'New password',

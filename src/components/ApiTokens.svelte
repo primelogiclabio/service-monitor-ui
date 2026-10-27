@@ -58,7 +58,7 @@
     <div class="table-wrap">
       <table class="data">
         <thead>
-          <tr><th>Name</th><th>Access</th><th class="hide-sm">Created</th><th class="hide-sm">Expires</th><th>Last used</th><th></th></tr>
+          <tr><th>Name</th><th>Access</th><th class="hide-sm">Created</th><th class="hide-sm">Expires</th><th></th></tr>
         </thead>
         <tbody>
           {#each apiTokens as t (t.id)}
@@ -67,9 +67,8 @@
               <td>{scopeLabel(t.scope)}</td>
               <td class="hide-sm">{fmtDateTime(t.createdAt)}</td>
               <td class="hide-sm">{t.expiresAt ? fmtDateTime(t.expiresAt) : '—'}</td>
-              <td>{t.usedAt ? fmtDateTime(t.usedAt) : '—'}</td>
               <td class="num">
-                <button class="btn small danger" type="button" title="Stop this token working. Anything using it is locked out; this cannot be undone." onclick={() => (revoking = t)}>Revoke</button>
+                <button class="btn small danger" type="button" aria-label="Revoke the token {t.name}" title="Stop this token working. Anything using it is locked out; this cannot be undone." onclick={() => (revoking = t)}>Revoke</button>
               </td>
             </tr>
           {/each}

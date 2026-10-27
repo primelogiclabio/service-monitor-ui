@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { SETTINGS_SECTIONS, groupTokens, pickSection, sectionsFor, serverNamesFrom } from '../src/lib/settings.js';
+import { SETTINGS_SECTIONS, groupTokens, pickSection, sectionsFor, serverNamesFrom, serverSeenFrom } from '../src/lib/settings.js';
 
 const NOW = 1_800_000_000_000;
 const HOUR = 3_600_000;
@@ -59,6 +59,18 @@ describe('the hub token list, sorted for Settings', () => {
     expect([...serverNamesFrom(status)]).toEqual([['s1', 'db01'], ['s2', 'web02']]);
     expect(serverNamesFrom(null).size).toBe(0);
   });
+
+  it("shows when each agent last reported, which the token itself does not record", () => {
+    const status = { clusters: [{ name: 'prod', servers: [{ id: 's1', name: 'db01', lastSeen: NOW - 5000 }, { id: 's2', name: 'new' }] }] };
+    const seen = serverSeenFrom(status);
+    expect([...seen]).toEqual([['s1', NOW - 5000]]);
+    const { agents } = groupTokens(
+      [{ id: 'a', name: 'agent:db01', scope: 'AGENT', serverId: 's1', createdAt: 1, usedAt: null },
+        { id: 'b', name: 'agent:new', scope: 'AGENT', serverId: 's2', createdAt: 2, usedAt: null }],
+      { now: NOW, serverSeen: seen },
+    );
+    expect(agents.map((t) => [t.id, t.lastSeen])).toEqual([['a', NOW - 5000], ['b', null]]);
+  });
 });
 
 describe('the page', () => {
@@ -76,9 +88,9 @@ describe('the page', () => {
     expect(api).toContain('svcmon token create');
   });
 
-  it('warns that a revoked agent leaves its server offline until it is enrolled again', () => {
+  it('warns that a revoked agent leaves its server offline, and how to let it report again', () => {
     const agents = read('src/components/AgentTokens.svelte');
-    expect(agents).toContain('shows offline until it is enrolled again');
+    expect(agents).toContain('so it shows offline. To let that server report again, remove it');
     expect(agents).toContain('href="#/enroll"');
   });
 });

@@ -3,8 +3,8 @@
   import { getApi } from '../lib/auth.svelte.js';
   import { status } from '../lib/status.svelte.js';
   import { notify } from '../lib/notify.svelte.js';
-  import { fmtDateTime } from '../lib/format.js';
-  import { groupTokens, serverNamesFrom } from '../lib/settings.js';
+  import { ago, fmtDateTime } from '../lib/format.js';
+  import { groupTokens, serverNamesFrom, serverSeenFrom } from '../lib/settings.js';
   import ConfirmDialog from './ConfirmDialog.svelte';
 
   let tokens = $state([]);
@@ -12,7 +12,10 @@
   let error = $state('');
   let revoking = $state(null);
 
-  const groups = $derived(groupTokens(tokens, { serverNames: serverNamesFrom(status.data) }));
+  const groups = $derived(groupTokens(tokens, {
+    serverNames: serverNamesFrom(status.data),
+    serverSeen: serverSeenFrom(status.data),
+  }));
 
   async function load() {
     try {
@@ -57,15 +60,15 @@
   {:else}
     <div class="table-wrap">
       <table class="data">
-        <thead><tr><th>Server</th><th class="hide-sm">Registered</th><th>Last used</th><th></th></tr></thead>
+        <thead><tr><th>Server</th><th class="hide-sm">Registered</th><th>Last report</th><th></th></tr></thead>
         <tbody>
           {#each groups.agents as t (t.id)}
             <tr>
               <td>{t.server}</td>
               <td class="hide-sm">{fmtDateTime(t.createdAt)}</td>
-              <td>{t.usedAt ? fmtDateTime(t.usedAt) : '—'}</td>
+              <td title={t.lastSeen ? fmtDateTime(t.lastSeen) : ''}>{t.lastSeen ? ago(t.lastSeen) : '—'}</td>
               <td class="num">
-                <button class="btn small danger" type="button" title="Stop this agent reporting. The server stays, offline, until it is enrolled again." onclick={() => (revoking = t)}>Revoke</button>
+                <button class="btn small danger" type="button" aria-label="Revoke the agent credential of {t.server}" title="Stop this agent reporting. The server stays, offline." onclick={() => (revoking = t)}>Revoke</button>
               </td>
             </tr>
           {/each}
@@ -95,7 +98,7 @@
               <td class="hide-sm">{fmtDateTime(t.createdAt)}</td>
               <td>{t.expiresAt ? fmtDateTime(t.expiresAt) : '—'}</td>
               <td class="num">
-                <button class="btn small danger" type="button" title="Stop this token registering a server" onclick={() => (revoking = t)}>Revoke</button>
+                <button class="btn small danger" type="button" aria-label="Revoke the one-time token {t.name}" title="Stop this token registering a server" onclick={() => (revoking = t)}>Revoke</button>
               </td>
             </tr>
           {/each}
@@ -109,7 +112,7 @@
   <ConfirmDialog
     title={revoking.scope === 'AGENT' ? 'Revoke agent credential' : 'Revoke one-time token'}
     message={revoking.scope === 'AGENT'
-      ? `Revoke the credential of the agent on “${revoking.server}”? The server stays on the hub with its checks and history, but its agent can no longer report, so it shows offline until it is enrolled again (Add server, Enroll an installed agent).`
+      ? `Revoke the credential of the agent on “${revoking.server}”? The server stays on the hub with its checks and history, but its agent can no longer report, so it shows offline. To let that server report again, remove it on its page and enroll its agent anew.`
       : `Revoke “${revoking.name}”? It can no longer register a server.`}
     confirmLabel="Revoke"
     onconfirm={revoke}
