@@ -118,6 +118,35 @@ describe('opening the page', () => {
     expect(callsTo('GET /api/v1/hub')).toHaveLength(0); // the hub answers 403 password_change_required until then
   });
 
+  it('shows the refusal instead of the form when the hub does not let people in from here', async () => {
+    routes['GET /api/v1/session'] = () =>
+      reply(200, { signedIn: false, network: 'outside', address: '203.0.113.7', signInAllowed: false, signInRefusal: 'outside_not_allowed' });
+    const { auth, getApi, restore, screen } = await fresh();
+    expect(await restore()).toBe(false);
+    expect(auth.access).toEqual({ network: 'outside', address: '203.0.113.7', signInAllowed: false, refusal: 'outside_not_allowed' });
+    expect(getApi()).toBeNull();
+    expect(screen(true)).toBe('refused');
+  });
+
+  it('shows the form from outside when the hub lets people in from there', async () => {
+    routes['GET /api/v1/session'] = () => reply(200, { signedIn: false, network: 'outside', address: '203.0.113.7', signInAllowed: true });
+    const { auth, restore, screen } = await fresh();
+    await restore();
+    expect(auth.access).toMatchObject({ network: 'outside', signInAllowed: true, refusal: '' });
+    expect(screen(true)).toBe('login');
+  });
+
+  it('checking again after joining the network brings the form back', async () => {
+    routes['GET /api/v1/session'] = () =>
+      reply(200, { signedIn: false, network: 'outside', address: '203.0.113.7', signInAllowed: false, signInRefusal: 'outside_not_allowed' });
+    const { restore, screen } = await fresh();
+    await restore();
+    expect(screen(true)).toBe('refused');
+    routes['GET /api/v1/session'] = () => reply(200, { signedIn: false, network: 'inside', address: '10.0.0.7', signInAllowed: true });
+    await restore();
+    expect(screen(true)).toBe('login');
+  });
+
   it('deletes what older versions kept in this browser, a token among it, and leaves the rest', async () => {
     for (const store of [session, remembered]) {
       store.setItem('sm-auth', JSON.stringify({ hubUrl: '', token: 'svm_a_old-token-000000000000000000000' }));
@@ -181,6 +210,14 @@ describe('signing in', () => {
     await expect(signIn({ username: 'alice', password: PASSWORD })).rejects.toMatchObject({ name: 'ApiError', status, code, message });
     expect(auth).toMatchObject({ signedIn: false, mustChangePassword: false, error: '' });
     expect(getApi()).toBeNull();
+  });
+
+  it('a sign-in refused for where the browser is shows the refusal, not the form again', async () => {
+    routes['POST /api/v1/session'] = () => reply(403, { error: 'insecure_transport', message: 'HTTPS only from outside' });
+    const { auth, signIn, screen } = await fresh();
+    await expect(signIn({ username: 'alice', password: PASSWORD })).rejects.toMatchObject({ code: 'insecure_transport' });
+    expect(auth.access).toMatchObject({ signInAllowed: false, refusal: 'insecure_transport' });
+    expect(screen(true)).toBe('refused');
   });
 
   it('a failed attempt leaves an existing session alone', async () => {
@@ -272,6 +309,19 @@ describe('an active session', () => {
     await expect(changePassword({ currentPassword: 'wrong', newPassword: NEW_PASSWORD })).rejects.toMatchObject({ code: 'wrong_password' });
     expect(auth.signedIn).toBe(true);
     expect(getApi()).not.toBeNull();
+  });
+
+  it('leaves the dashboard for the refusal when the browser is no longer on the internal network', async () => {
+    const { auth, getApi, screen } = await signedInAdmin();
+    routes['GET /api/v1/status'] = () => reply(403, { error: 'outside_not_allowed', message: 'Access from outside the internal network is not allowed' });
+    routes['GET /api/v1/session'] = () =>
+      reply(200, { signedIn: false, network: 'outside', address: '198.51.100.4', signInAllowed: false, signInRefusal: 'outside_not_allowed' });
+
+    await expect(getApi().status()).rejects.toMatchObject({ status: 403, code: 'outside_not_allowed' });
+    expect(auth).toMatchObject({ signedIn: false, user: '', error: '' });
+    expect(getApi()).toBeNull();
+    expect(screen(true)).toBe('refused');
+    await vi.waitFor(() => expect(auth.access.address).toBe('198.51.100.4'));
   });
 
   it('Sign out asks the hub to end the sign-in, then shows the form', async () => {

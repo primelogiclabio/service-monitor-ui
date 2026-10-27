@@ -6,6 +6,7 @@
   import UserList from '../components/UserList.svelte';
   import AgentTokens from '../components/AgentTokens.svelte';
   import ApiTokens from '../components/ApiTokens.svelte';
+  import AccessSettings from '../components/AccessSettings.svelte';
 
   const sections = $derived(sectionsFor(auth.admin));
   const section = $derived(pickSection(route.params.section, auth.admin));
@@ -17,8 +18,8 @@
       <h1 style="font-size: 1.75rem">Settings</h1>
       <p class="secondary" style="margin-top: 4px">
         {auth.admin
-          ? 'Your account, the people who may sign in, and the credentials of agents and scripts.'
-          : 'Your account and where you are signed in.'}
+          ? 'Your account, the people who may sign in, the credentials of agents and scripts, and where the hub may be used from.'
+          : 'Your account, where you are signed in, and where the hub may be used from.'}
       </p>
     </div>
     {#if sections.length > 1}
@@ -36,6 +37,8 @@
     <AgentTokens />
   {:else if section === 'api'}
     <ApiTokens />
+  {:else if section === 'access'}
+    <AccessSettings />
   {:else}
     <AccountSettings />
   {/if}

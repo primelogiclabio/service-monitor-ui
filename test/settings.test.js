@@ -7,9 +7,9 @@ const HOUR = 3_600_000;
 const token = (id, scope, extra = {}) => ({ id, name: id, scope, serverId: null, createdAt: NOW - HOUR, expiresAt: null, usedAt: null, ...extra });
 
 describe('the sections of Settings', () => {
-  it('are only Account for a read-only user, and all four for an administrator', () => {
-    expect(sectionsFor(false).map((s) => s.key)).toEqual(['account']);
-    expect(sectionsFor(true).map((s) => s.key)).toEqual(['account', 'users', 'agents', 'api']);
+  it('are Account and Access for a read-only user, and all five for an administrator', () => {
+    expect(sectionsFor(false).map((s) => s.key)).toEqual(['account', 'access']);
+    expect(sectionsFor(true).map((s) => s.key)).toEqual(['account', 'users', 'agents', 'api', 'access']);
     expect(SETTINGS_SECTIONS.every((s) => s.label)).toBe(true);
   });
 

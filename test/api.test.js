@@ -111,6 +111,29 @@ describe('createApi', () => {
     expect(onUnauthorized).not.toHaveBeenCalled();
   });
 
+  it('reports a refusal for where the browser is, and no other 403, to the caller', async () => {
+    const answers = [
+      reply(403, { error: 'outside_not_allowed', message: 'Access from outside the internal network is not allowed' }),
+      reply(403, { error: 'insecure_transport', message: 'HTTPS only from outside' }),
+      reply(403, { error: 'forbidden', message: 'Your role does not allow it' }),
+    ];
+    const onRefused = vi.fn();
+    const onUnauthorized = vi.fn();
+    const api = createApi({ fetchImpl: async () => answers.shift(), onRefused, onUnauthorized });
+    await expect(api.status()).rejects.toMatchObject({ status: 403, code: 'outside_not_allowed' });
+    await expect(api.status()).rejects.toMatchObject({ status: 403, code: 'insecure_transport' });
+    await expect(api.users()).rejects.toMatchObject({ code: 'forbidden' });
+    expect(onRefused.mock.calls).toEqual([['outside_not_allowed'], ['insecure_transport']]);
+    expect(onUnauthorized).not.toHaveBeenCalled();
+  });
+
+  it('asks the hub where it may be used from at /access', async () => {
+    const seen = [];
+    const api = createApi({ fetchImpl: async (url, init) => (seen.push(`${init.method} ${url}`), reply(200, { allowOutside: false })) });
+    expect(await api.access()).toEqual({ allowOutside: false });
+    expect(seen).toEqual(['GET /api/v1/access']);
+  });
+
   it("behind a proxy any 401 means its sign-in ended, since the proxy's own answer has no hub code", async () => {
     const onUnauthorized = vi.fn();
     const api = createApi({ proxy: { apiBase: '/web-api', headers: {} }, fetchImpl: async () => reply(401, ''), onUnauthorized });

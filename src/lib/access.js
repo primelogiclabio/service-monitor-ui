@@ -1,0 +1,45 @@
+// Where the hub lets people in from (svcmon.access) and how it sees this browser, in words for a person. The hub
+// decides; the page only explains. Pure functions, so they are easy to test.
+
+/** The hub's error codes for a request refused because of where it comes from. */
+export const REFUSALS = new Set(['outside_not_allowed', 'insecure_transport']);
+
+export function isRefusal(code) {
+  return REFUSALS.has(code);
+}
+
+/**
+ * What the page says instead of the sign-in form. `access` is what GET /session said about this browser:
+ * `{ network, address, refusal }`.
+ */
+export function refusalText(access) {
+  const where = access?.address ? `This hub sees this browser at ${access.address}, outside its internal network.` : '';
+  if (access?.refusal === 'insecure_transport') {
+    return {
+      title: 'This hub works over HTTPS only from outside the internal network',
+      detail: 'Open it with its https:// address, or from inside the network.',
+      where,
+    };
+  }
+  return {
+    title: 'Access from outside the internal network is not allowed',
+    detail: 'Open the dashboard from inside the network, for example over the VPN, or ask an administrator.',
+    where,
+  };
+}
+
+/** The lines of Settings > Access, from GET /access. */
+export function describeAccess(view) {
+  if (!view) return null;
+  const outside = view.network === 'outside';
+  return {
+    rule: view.allowOutside
+      ? 'People outside the internal network may sign in, over HTTPS only. API tokens and the initial password work from inside only.'
+      : 'Only people on the internal network may use this hub. Everyone else is refused, whatever they sign in with.',
+    setting: `svcmon.access.allow-outside: ${view.allowOutside ? 'true' : 'false'}`,
+    browser: `This browser is seen as ${outside ? 'outside' : 'inside'} the internal network (${view.address})${view.secure ? ', over HTTPS' : ', over plain HTTP'}.`,
+    networks: view.internalNetworks ?? [],
+    proxies: view.publicProxies ?? [],
+    outside,
+  };
+}

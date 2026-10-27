@@ -2,6 +2,8 @@
 // never sees, so the page holds no credential at all. Behind a sign-in proxy, `proxy` ({ apiBase, headers }) sends the
 // calls to the proxy's path on this site with its marker headers, and the proxy adds the credential.
 
+import { isRefusal } from './access.js';
+
 export class ApiError extends Error {
   constructor(status, message, code = '') {
     super(message);
@@ -22,7 +24,7 @@ function query(params) {
   return s ? `?${s}` : '';
 }
 
-export function createApi({ proxy = null, fetchImpl, onUnauthorized } = {}) {
+export function createApi({ proxy = null, fetchImpl, onUnauthorized, onRefused } = {}) {
   const send = fetchImpl ?? ((...args) => fetch(...args));
   const id = encodeURIComponent;
   const root = proxy ? `${proxy.apiBase}/v1` : '/api/v1';
@@ -66,6 +68,8 @@ export function createApi({ proxy = null, fetchImpl, onUnauthorized } = {}) {
       const code = typeof data?.error === 'string' ? data.error : '';
       // A proxy's own 401 carries no hub code; any 401 there means its sign-in ended.
       if (res.status === 401 && (proxy || SIGNED_OUT.has(code))) onUnauthorized?.();
+      // Refused for where the browser is (it moved off the internal network, say): no request from here will work.
+      if (res.status === 403 && isRefusal(code)) onRefused?.(code);
       throw new ApiError(res.status, data?.message ?? (text || res.statusText), code);
     }
     return data;
@@ -75,6 +79,7 @@ export function createApi({ proxy = null, fetchImpl, onUnauthorized } = {}) {
     request,
     hub: () => request('GET', '/hub'),
     me: () => request('GET', '/me'),
+    access: () => request('GET', '/access'),
     session: () => request('GET', '/session'),
     signIn: (body) => request('POST', '/session', body),
     signOut: () => request('DELETE', '/session'),
