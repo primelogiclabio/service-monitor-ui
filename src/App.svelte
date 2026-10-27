@@ -9,6 +9,7 @@
   import Login from './views/Login.svelte';
   import ChangePassword from './views/ChangePassword.svelte';
   import ProxyGate from './views/ProxyGate.svelte';
+  import Refused from './views/Refused.svelte';
   import Overview from './views/Overview.svelte';
   import Server from './views/Server.svelte';
   import Checks from './views/Checks.svelte';
@@ -63,6 +64,8 @@
   <div class="login"><p class="muted">Loading…</p></div>
 {:else if view === 'gate'}
   <ProxyGate />
+{:else if view === 'refused'}
+  <Refused />
 {:else if view === 'login'}
   <Login />
 {:else if view === 'change-password'}

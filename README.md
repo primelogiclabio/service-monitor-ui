@@ -19,7 +19,7 @@ The web dashboard for [service-monitor](https://github.com/primelogiclabio/servi
 - **Server:** status, OS, agent version, last seen and every check. A check opens to its history: a chart (CPU, memory and disk with warning and critical lines; response time for HTTP, TCP and ping) or a status strip, with a table view and 1h / 6h / 24h / 7d ranges.
 - **Monitors:** every check on one page with filters. Admins add, edit, enable, disable, run and delete checks. A check that an agent declares in its own `checks.json` carries an "Agent file" tag and is changed there; the dashboard only lets you switch it off.
 - **Add server:** gives the command for the agent side. Choose *Install a new agent* or *Enroll an installed agent*; a join key is made for you (24 hours, any number of servers), and one-time tokens and longer keys are under "Other ways".
-- **Settings:** change your password and end your other sign-ins. Administrators also add users and change their role, reset their password, disable or delete them; revoke an agent's credential or an unused one-time token; and revoke the API tokens the CLI uses.
+- **Settings:** change your password and end your other sign-ins. Administrators also add users and change their role, reset their password, disable or delete them; revoke an agent's credential or an unused one-time token; and revoke the API tokens the CLI uses. **Access** shows where the hub may be used from and how it sees your browser (read-only; it is set in the hub's `application.yml`).
 - **Help:** the panel beside Add server and Add check, the **i** beside each field, hover text, and a Help page.
 
 **Live** (top right): the page asks the hub for the status every 5 seconds; switch Live on and the hub pushes changes over a WebSocket instead. It needs a hub with the live view and a load balancer that passes WebSocket upgrades, turns itself off after 5 minutes without activity, and falls back to normal refreshing if the connection drops, so nothing depends on it.
@@ -29,6 +29,7 @@ Status always has a shape and a word as well as a colour. Light and dark themes 
 ## Sign-in
 
 - **User name and password:** every person has an account on the hub, as an administrator (changes anything) or read-only (looks, and changes only their own password). A new hub has the account `admin` with the password `admin`; it works only from the hub's internal network, and the dashboard asks for a new password straight away. The same goes for the temporary password an administrator gets when adding a user or resetting a password under **Settings**. The hub signs you in with an `HttpOnly` cookie, so this page never sees a credential and keeps nothing in browser storage; it sends `X-Svcmon-Request: 1` with every call, which the hub requires so other sites cannot use the cookie. A sign-in ends after a while without use (the page's own refreshing does not count) and the page then returns to the sign-in form. Repeated wrong attempts make the hub ask you to wait, and the page says how long.
+- **From outside the internal network:** a hub lets people in only from its internal network unless it is set to allow outside access, and then over HTTPS only. The page asks the hub (`GET /api/v1/session`) how it sees the browser, and where the hub refuses it, it says so instead of showing the form, with a **Check again** button for after joining the VPN. A browser that leaves the network while signed in is taken to the same page.
 - **The CLI and scripts** keep using API tokens (`svcmon token create`); Settings lists them for revoking. An older dashboard kept a token in browser storage; this one deletes it when it loads.
 - **Behind a sign-in proxy:** where nginx and a gateway sign people in, the page never holds a token and shows no form while the proxy answers. It calls `<apiBase>/v1/...` on its own site, sending only the marker `headers` your proxy must require, and asks `GET <apiBase>/v1/me` who is signed in. No session (401) goes to `signInUrl` once; an account the proxy refuses (403) gets a page that says so. If nothing answers as the proxy, the page falls back to the password form and says why. The hub's [reference](https://github.com/primelogiclabio/service-monitor/blob/main/docs/service-monitor-reference.md#sign-in-with-keycloak-or-another-openid-connect-provider) covers the proxy side.
 
@@ -76,7 +77,7 @@ The hub's settings are in its [reference](https://github.com/primelogiclabio/ser
 ```text
 src/lib/         api client, formatting, routing, auth/status/theme state, config.json reader
 src/components/  status badge, charts, check table, forms, dialogs
-src/views/       dashboard, server, monitors, add server, settings, sign-in, password change, proxy gate
+src/views/       dashboard, server, monitors, add server, settings, sign-in, password change, proxy gate, refusal
 public/          config.json (copied into dist/ as is)
 scripts/         demo data seeder
 test/            unit tests

@@ -1,3 +1,4 @@
+import { isRefusal } from './access.js';
 import { ApiError, createApi } from './api.js';
 import { loadConfig } from './config.js';
 
@@ -19,6 +20,10 @@ export const SESSION_ENDED = 'Your sign-in has ended. Sign in again.';
  * and `error` carries the hub's message. When nothing answers as the proxy ('unreachable'), the page falls back to
  * `mode` 'session' so the password form stays usable; `fallback` then says why, in words for the sign-in page, and
  * `proxy` is kept so the page can offer to try the proxy again.
+ *
+ * `access` is how the hub sees this browser, from GET /session: `{ network, address, signInAllowed, refusal }`, where
+ * `refusal` is the hub's code ('outside_not_allowed' or 'insecure_transport') when it does not let people in from
+ * here. It is null when the hub did not say (an older hub).
  */
 export const auth = $state({
   admin: false,
@@ -33,12 +38,14 @@ export const auth = $state({
   gate: '',
   redirecting: false,
   fallback: '',
+  access: null,
 });
 
 let api = null;
 
 /**
- * Which screen the page shows: 'loading', 'gate' (behind a proxy, not signed in), 'login', 'change-password' or 'app'.
+ * Which screen the page shows: 'loading', 'gate' (behind a proxy, not signed in), 'refused' (the hub does not let
+ * people in from where this browser is), 'login', 'change-password' or 'app'.
  * While the page is being sent to the proxy's sign-in page it stays on 'loading', so no sign-in screen flashes up
  * before the redirect.
  */
@@ -46,7 +53,8 @@ export function screen(ready) {
   if (!ready || auth.redirecting) return 'loading';
   if (auth.signedIn) return 'app';
   if (auth.mustChangePassword) return 'change-password';
-  return auth.mode === 'proxy' ? 'gate' : 'login';
+  if (auth.mode === 'proxy') return 'gate';
+  return auth.access?.refusal ? 'refused' : 'login';
 }
 
 /**
@@ -80,8 +88,41 @@ function sessionClient() {
     onUnauthorized: () => {
       if (api === client) signOut(SESSION_ENDED);
     },
+    onRefused: (code) => {
+      if (api === client) refuse(code);
+    },
   });
   return client;
+}
+
+/** What GET or POST /session said about this browser's network, or null when the hub did not say. */
+function accessFrom(state) {
+  if (!state?.network) return null;
+  return {
+    network: state.network,
+    address: state.address ?? '',
+    signInAllowed: state.signInAllowed !== false,
+    refusal: state.signInRefusal ?? '',
+  };
+}
+
+function markRefused(code) {
+  auth.access = { ...(auth.access ?? { network: 'outside', address: '' }), signInAllowed: false, refusal: code };
+}
+
+/**
+ * The hub refused a request because of where this browser is (it left the internal network, say). Nothing else will
+ * work from here, so show the refusal instead of a dashboard full of errors, and ask the hub for the current address.
+ */
+function refuse(code) {
+  signOut();
+  markRefused(code);
+  sessionClient()
+    .session()
+    .then((state) => {
+      if (!auth.signedIn && accessFrom(state)) auth.access = accessFrom(state);
+    })
+    .catch(() => {});
 }
 
 /** Makes `client` the session the hub described in `state` (the body of GET or POST /session). */
@@ -97,6 +138,7 @@ async function adopt(client, state) {
   auth.admin = auth.role === 'ADMIN';
   auth.mustChangePassword = must;
   auth.signedIn = !must;
+  if (state.network) auth.access = accessFrom(state);
   auth.hub = hub;
   auth.error = '';
   auth.gate = '';
@@ -106,7 +148,14 @@ async function adopt(client, state) {
 /** Signs in with a user name and password. Throws an ApiError (with the hub's `code`) when the hub refuses. */
 export async function signIn({ username, password }) {
   const client = sessionClient();
-  const state = await client.signIn({ username: username.trim(), password });
+  let state;
+  try {
+    state = await client.signIn({ username: username.trim(), password });
+  } catch (e) {
+    // The browser is somewhere the hub does not let people in from: show that, not a form that cannot work.
+    if (e.status === 403 && isRefusal(e.code)) markRefused(e.code);
+    throw e;
+  }
   if (!state?.signedIn) throw new ApiError(500, 'The hub did not sign you in');
   await adopt(client, state);
 }
@@ -158,6 +207,7 @@ async function resumeSession() {
     if (e.status === 0) auth.error = e.message;
     return false;
   }
+  auth.access = accessFrom(state);
   if (!state?.signedIn) return false;
   await adopt(client, state);
   return auth.signedIn;
