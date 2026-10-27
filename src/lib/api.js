@@ -79,6 +79,7 @@ export function createApi({ proxy = null, fetchImpl, onUnauthorized, onRefused }
     request,
     hub: () => request('GET', '/hub'),
     me: () => request('GET', '/me'),
+    audit: ({ category, before, limit } = {}) => request('GET', `/audit${query({ category, before, limit })}`),
     access: () => request('GET', '/access'),
     session: () => request('GET', '/session'),
     signIn: (body) => request('POST', '/session', body),
