@@ -10,8 +10,8 @@
   import WithHelp from '../components/WithHelp.svelte';
   import Tip from '../components/Tip.svelte';
 
-  // The page's own address: where the hub is if the dashboard is served by it.
-  const pageHub = auth.hubUrl || location.origin;
+  // The page's own address: where the hub is, since the dashboard is always served at the hub's address.
+  const pageHub = location.origin;
   const localHub = thisServerHub(pageHub);
   // When the browser is on the hub's machine its platform is the likelier one; otherwise Windows comes first.
   const order = pageIsOnTheHub(pageHub) && guessPlatform(navigator.userAgent) === 'unix' ? ['unix', 'windows'] : ['windows', 'unix'];
@@ -168,7 +168,7 @@
       {:else if autoBusy}
         <p class="small muted">Preparing the command…</p>
       {:else if !auth.admin}
-        <p class="small muted">Making the command needs an ADMIN token. Sign in with one, or paste a join key under Other ways.</p>
+        <p class="small muted">Making the command needs an administrator. Ask one, or paste a join key under Other ways.</p>
       {/if}
     </div>
 
@@ -264,7 +264,7 @@
           {/key}
         {/if}
       {:else}
-        <p class="muted">Creating join keys and one-time tokens needs an ADMIN token.</p>
+        <p class="muted">Creating join keys and one-time tokens needs an administrator.</p>
       {/if}
     </div>
   </details>

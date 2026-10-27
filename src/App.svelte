@@ -7,12 +7,13 @@
   import { theme, initTheme, cycleTheme } from './lib/theme.svelte.js';
   import { ago } from './lib/format.js';
   import Login from './views/Login.svelte';
+  import ChangePassword from './views/ChangePassword.svelte';
   import ProxyGate from './views/ProxyGate.svelte';
   import Overview from './views/Overview.svelte';
   import Server from './views/Server.svelte';
   import Checks from './views/Checks.svelte';
   import Enroll from './views/Enroll.svelte';
-  import Tokens from './views/Tokens.svelte';
+  import Settings from './views/Settings.svelte';
   import Help from './views/Help.svelte';
   import Toasts from './components/Toasts.svelte';
 
@@ -49,7 +50,7 @@
   const nav = $derived([
     { name: 'overview', href: '#/', label: 'Dashboard' },
     { name: 'checks', href: '#/checks', label: 'Monitors' },
-    { name: 'tokens', href: '#/tokens', label: 'Tokens' },
+    { name: 'settings', href: '#/settings', label: 'Settings' },
     { name: 'help', href: '#/help', label: 'Help' },
   ]);
   // A server's page and Add server are reached from the dashboard, so the dashboard stays marked.
@@ -64,6 +65,8 @@
   <ProxyGate />
 {:else if view === 'login'}
   <Login />
+{:else if view === 'change-password'}
+  <ChangePassword />
 {:else}
   <header class="topbar">
     <div class="container">
@@ -106,8 +109,8 @@
       <Checks />
     {:else if route.name === 'enroll'}
       <Enroll />
-    {:else if route.name === 'tokens'}
-      <Tokens />
+    {:else if route.name === 'settings'}
+      <Settings />
     {:else if route.name === 'help'}
       <Help />
     {:else}
@@ -118,9 +121,9 @@
   <footer class="site">
     <div class="container row between">
       <span>
-        Hub {auth.hub?.version ?? ''} · {auth.admin ? 'admin access' : 'read-only access'}
+        Hub {auth.hub?.version ?? ''}
         {#if auth.user}· {auth.user}{/if}
-        {#if auth.hubUrl}· {auth.hubUrl}{/if}
+        · {auth.admin ? 'admin access' : 'read-only access'}
       </span>
       <span>
         {#if live.state === 'on'}Live{:else if status.updatedAt}Updated {ago(status.updatedAt, now)}{/if}

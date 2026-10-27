@@ -18,7 +18,7 @@ export const HELP = {
     ],
     notes: [
       'The join key in the command is made by the dashboard when you open the page. It works for 24 hours and registers any number of servers; "Make a new one" replaces it. Anyone holding it can add servers, so keep it like a password. If it leaks, revoke it under "Other ways"; servers it already registered keep working.',
-      '"Other ways" has a join key that lasts longer (for a script or a team, optionally tied to one cluster) and a one-time token for a single server. A one-time token works once and expires after 1 hour unless you choose another time, 1 day at most. Unused tokens can be revoked on the Tokens page.',
+      '"Other ways" has a join key that lasts longer (for a script or a team, optionally tied to one cluster) and a one-time token for a single server. A one-time token works once and expires after 1 hour unless you choose another time, 1 day at most. Unused tokens can be revoked under Settings, Agents.',
       'Registering gives the server its own permanent credential, kept in `agent.json` on that server; the join key or token is no longer needed afterwards.',
       'The command uses the address of this page for the hub. Choose Change beside it when that is not what the server should use: on the hub\'s own machine give the local address (a link fills it in), and if this page is reached through a load balancer give the hub\'s internal address.',
     ],
@@ -127,7 +127,7 @@ export const FIELD_HELP = {
   },
   'enroll.label': {
     label: 'Label',
-    text: 'A note on the token, shown on the Tokens page. It does not name the server: the server uses its own host name unless you add `--name` to the command.',
+    text: 'A note on the token, shown under Settings, Agents until it is used. It does not name the server: the server uses its own host name unless you add `--name` to the command.',
   },
   'enroll.ttl': {
     label: 'Valid for',
@@ -157,25 +157,21 @@ export const FIELD_HELP = {
     label: 'Stops working',
     text: 'A join key works until you revoke it unless you pick a date here. Servers it registered keep working either way.',
   },
-  'token.name': {
-    label: 'What it is for',
-    text: 'A note to help you decide later which token to revoke, for example the person, script or screen that uses it.',
-  },
-  'token.scope': {
-    label: 'Access',
-    text: 'Read only can look at everything but change nothing. Admin can also add and change checks and servers, manage alert channels and create tokens.',
-  },
-  'login.token': {
-    label: 'API token',
-    text: 'The hub prints an admin token once, when its database is first created. An admin can make more on the Tokens page or with `svcmon token create`.',
-  },
   'login.password': {
-    label: 'Administrator password',
-    text: "The hub's own administrator account, for when no other sign-in works. The hub prints its password once at first start; an admin can change it through the API. The password is sent to the hub and never stored in this browser.",
+    label: 'Password',
+    text: "Your password on this hub. A new hub has the account `admin` with the password `admin`, which works only from the hub's internal network and has to be changed at the first sign-in; the same goes for a temporary password an administrator gives you. The password is sent to the hub and never stored in this browser.",
   },
-  'login.hub': {
-    label: 'Hub address',
-    text: "Leave empty when the hub serves this page. Otherwise enter the hub's address; the hub must list this site in its `cors-allowed-origins` setting.",
+  'password.new': {
+    label: 'New password',
+    text: 'From 12 to 128 characters and not your user name; any characters will do. A few unrelated words together are long and easy to remember. Your other sign-ins end when it changes.',
+  },
+  'user.name': {
+    label: 'User name',
+    text: 'What the person types to sign in: 1 to 64 letters, digits and . _ @ - (an email address works). Two users cannot share a name, whatever the case.',
+  },
+  'user.role': {
+    label: 'Role',
+    text: 'Read only can look at the dashboard, servers and checks but change nothing except their own password. Administrator can also change checks and servers, add servers, manage users and revoke tokens.',
   },
   'server.cluster': {
     label: 'Cluster',

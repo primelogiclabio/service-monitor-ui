@@ -7,6 +7,9 @@ let timer = null;
 let inflight = false;
 let paused = false;
 
+/** The page asking by itself, not someone using it: the hub does not count it towards keeping the sign-in alive. */
+const BACKGROUND = { background: true };
+
 /** Shows a roll-up the hub pushed over the live connection. */
 export function applyStatus(data) {
   status.data = data;
@@ -14,14 +17,15 @@ export function applyStatus(data) {
   status.updatedAt = Date.now();
 }
 
-export async function refresh() {
+/** Fetches the roll-up now. Pages call it after a change someone made; the timer passes `background`. */
+export async function refresh({ background = false } = {}) {
   const api = getApi();
   if (!api || inflight) return;
   inflight = true;
   status.loading = true;
   const startedAt = Date.now();
   try {
-    const data = await api.status();
+    const data = await api.status({ background });
     // A push that landed while this request was out is newer than its answer.
     if (status.updatedAt > startedAt) return;
     applyStatus(data);
@@ -34,15 +38,15 @@ export async function refresh() {
 }
 
 function onVisibility() {
-  if (!document.hidden && !paused) refresh();
+  if (!document.hidden && !paused) refresh(BACKGROUND);
 }
 
 /** Polls while the tab is visible. Safe to call more than once. */
 export function startPolling(intervalMs = 5000) {
   stopPolling();
-  refresh();
+  refresh(BACKGROUND);
   timer = setInterval(() => {
-    if (!document.hidden && !paused) refresh();
+    if (!document.hidden && !paused) refresh(BACKGROUND);
   }, intervalMs);
   document.addEventListener('visibilitychange', onVisibility);
 }
@@ -50,7 +54,7 @@ export function startPolling(intervalMs = 5000) {
 /** Holds polling while the live connection supplies the data; resuming fetches at once. */
 export function pausePolling(on) {
   paused = on;
-  if (!on && timer) refresh();
+  if (!on && timer) refresh(BACKGROUND);
 }
 
 export function stopPolling() {

@@ -9,7 +9,7 @@ const reply = (status, body) => ({ ok: status < 300, status, statusText: 'x', te
 describe('join key API calls', () => {
   it('list, create and revoke at the hub paths', async () => {
     const fetchImpl = vi.fn(async (url, init) => (init.method === 'DELETE' ? reply(204) : reply(200, [])));
-    const api = createApi({ base: 'http://hub:8080', token: 't', fetchImpl });
+    const api = createApi({ fetchImpl });
 
     await api.joinKeys();
     await api.createJoinKey({ name: 'fleet', cluster: 'prod', expiresInDays: 30 });
@@ -17,9 +17,9 @@ describe('join key API calls', () => {
 
     const calls = fetchImpl.mock.calls.map(([url, init]) => [init.method, url, init.body]);
     expect(calls).toEqual([
-      ['GET', 'http://hub:8080/api/v1/join-keys', undefined],
-      ['POST', 'http://hub:8080/api/v1/join-keys', '{"name":"fleet","cluster":"prod","expiresInDays":30}'],
-      ['DELETE', 'http://hub:8080/api/v1/join-keys/a%20b%2Fc', undefined],
+      ['GET', '/api/v1/join-keys', undefined],
+      ['POST', '/api/v1/join-keys', '{"name":"fleet","cluster":"prod","expiresInDays":30}'],
+      ['DELETE', '/api/v1/join-keys/a%20b%2Fc', undefined],
     ]);
   });
 });

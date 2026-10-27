@@ -45,7 +45,7 @@ describe('help topics', () => {
     const notes = HELP.addServer.notes.join(' ');
     expect(notes).toContain('1 hour');
     expect(notes).toContain('1 day');
-    expect(notes).toContain('Tokens page');
+    expect(notes).toContain('Settings, Agents');
   });
 
   it('split text into plain and code pieces without keeping markup', () => {
