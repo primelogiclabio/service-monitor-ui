@@ -6,6 +6,7 @@ function memoryStorage() {
     getItem: (k) => (m.has(k) ? m.get(k) : null),
     setItem: (k, v) => m.set(k, String(v)),
     removeItem: (k) => m.delete(k),
+    keys: () => [...m.keys()],
   };
 }
 
@@ -35,7 +36,7 @@ beforeEach(() => {
       const path = new URL(url, 'https://monitor.example.com/').pathname;
       calls.push({ path, init });
       const handler = routes[path];
-      return handler ? handler() : reply(404, { message: 'not found' });
+      return handler ? handler(init ?? {}) : reply(404, { message: 'not found' });
     }),
   );
 });
@@ -59,14 +60,14 @@ describe('restore behind a sign-in proxy', () => {
     const { auth, getApi, restore } = await fresh();
 
     expect(await restore()).toBe(true);
-    expect(auth).toMatchObject({ mode: 'proxy', signedIn: true, user: 'alice', admin: true, token: '', gate: '', error: '' });
+    expect(auth).toMatchObject({ mode: 'proxy', signedIn: true, user: 'alice', admin: true, gate: '', error: '' });
     expect(auth.hub.version).toBe('0.1.0');
     expect(getApi()).not.toBeNull();
 
     const call = calls.find((c) => c.path === '/web-api/v1/me');
     expect(call.init.headers['X-PLL-Web']).toBe('1');
     expect(call.init.headers.Authorization).toBeUndefined();
-    expect(session.getItem('sm-auth')).toBeNull();
+    expect(calls.some((c) => c.path.startsWith('/api/'))).toBe(false); // the hub's own sign-in is not asked
   });
 
   it('a visitor with no session is sent to sign in, once, and comes back to the same page', async () => {
@@ -173,19 +174,31 @@ describe('restore behind a sign-in proxy', () => {
 });
 
 describe('when no proxy answers', () => {
-  const GOOD = 'svm_a_good-token-0000000000000000000000';
-  const tokenSignInRoutes = () => {
-    routes['/api/v1/hub'] = hub;
-    routes['/api/v1/tokens'] = () => reply(200, []);
-  };
+  const PASSWORD = 'correct horse battery staple';
 
-  it('a sign-in service that is down falls back to the token and password sign-in, and says why', async () => {
+  /** The hub's own sign-in, as the cookie would make it behave: signed in after a POST, across reloads. */
+  function hubSignIn() {
+    let signedIn = false;
+    const state = () => ({ signedIn: true, user: { id: 'u1', name: 'bob', role: 'ADMIN' }, mustChangePassword: false, expiresAt: Date.now() + 3_600_000 });
+    routes['/api/v1/hub'] = hub;
+    routes['/api/v1/session'] = (init) => {
+      if (init.method === 'POST') {
+        signedIn = true;
+        return reply(200, state());
+      }
+      return reply(200, signedIn ? state() : { signedIn: false });
+    };
+  }
+
+  it('a sign-in service that is down falls back to the password sign-in, and says why', async () => {
+    hubSignIn();
     routes['/web-api/v1/me'] = () => reply(503, { message: 'keys unavailable' });
-    const { auth, restore } = await fresh();
+    const { auth, restore, screen } = await fresh();
 
     expect(await restore()).toBe(false);
-    expect(auth).toMatchObject({ mode: 'token', signedIn: false, gate: '', error: '' });
+    expect(auth).toMatchObject({ mode: 'session', signedIn: false, gate: '', error: '' });
     expect(auth.fallback).toMatch(/answered 503/);
+    expect(screen(true)).toBe('login');
     expect(assigned).toEqual([]);
   });
 
@@ -193,7 +206,7 @@ describe('when no proxy answers', () => {
     // routes has no /web-api/ entry: the hub answers 404 to a path it does not know
     const { auth, restore } = await fresh();
     expect(await restore()).toBe(false);
-    expect(auth).toMatchObject({ mode: 'token', signedIn: false });
+    expect(auth).toMatchObject({ mode: 'session', signedIn: false });
     expect(auth.fallback).toMatch(/no sign-in service/);
   });
 
@@ -201,7 +214,7 @@ describe('when no proxy answers', () => {
     routes['/web-api/v1/me'] = () => reply(200, '<!doctype html><title>Service Monitor</title>');
     const { auth, restore } = await fresh();
     expect(await restore()).toBe(false);
-    expect(auth).toMatchObject({ mode: 'token', signedIn: false });
+    expect(auth).toMatchObject({ mode: 'session', signedIn: false });
     expect(auth.fallback).toMatch(/no sign-in service/);
   });
 
@@ -212,40 +225,32 @@ describe('when no proxy answers', () => {
     }));
     const { auth, restore } = await fresh();
     expect(await restore()).toBe(false);
-    expect(auth).toMatchObject({ mode: 'token', signedIn: false });
+    expect(auth).toMatchObject({ mode: 'session', signedIn: false });
     expect(auth.fallback).toMatch(/did not answer/);
   });
 
-  it('signing in with a token then works, and the session survives a reload while the proxy is still down', async () => {
-    tokenSignInRoutes();
+  it('signing in with a password then works, keeps nothing in the browser, and survives a reload while the proxy is down', async () => {
+    hubSignIn();
     const first = await fresh();
     await first.restore();
-    await first.login({ hubUrl: '', token: GOOD, remember: false });
-    expect(first.auth).toMatchObject({ mode: 'token', signedIn: true, admin: true });
-    expect(calls.find((c) => c.path === '/api/v1/hub').init.headers.Authorization).toBe(`Bearer ${GOOD}`);
+    await first.signIn({ username: 'bob', password: PASSWORD });
+    expect(first.auth).toMatchObject({ mode: 'session', signedIn: true, admin: true, user: 'bob' });
+    const post = calls.find((c) => c.path === '/api/v1/session' && c.init.method === 'POST');
+    expect(post.init.headers.Authorization).toBeUndefined();
+    expect(post.init.headers['X-PLL-Web']).toBeUndefined(); // the proxy's marker is for the proxy only
+    expect(session.keys()).toEqual([]);
 
-    vi.resetModules(); // a reload: new module state, same session storage
+    vi.resetModules(); // a reload: new module state, the same cookie at the hub
     const second = await fresh();
     expect(await second.restore()).toBe(true);
-    expect(second.auth).toMatchObject({ mode: 'token', signedIn: true, admin: true });
-  });
-
-  it('the password sign-in works too', async () => {
-    tokenSignInRoutes();
-    routes['/api/v1/login'] = () => reply(200, { token: GOOD, expiresAt: '2026-10-26T00:00:00Z', scope: 'ADMIN', name: 'local-login' });
-    const { auth, loginWithPassword, restore } = await fresh();
-    await restore();
-    await loginWithPassword({ hubUrl: '', username: 'admin', password: 'correct horse battery' });
-    expect(auth).toMatchObject({ mode: 'token', signedIn: true, admin: true });
-    expect(calls.find((c) => c.path === '/api/v1/login').init.body).toContain('correct horse battery');
-    expect(session.getItem('sm-auth')).not.toContain('correct horse battery'); // only the token is kept
+    expect(second.auth).toMatchObject({ mode: 'session', signedIn: true, admin: true, user: 'bob' });
   });
 
   it('trying the proxy again goes back to it as soon as it answers', async () => {
     routes['/web-api/v1/me'] = () => reply(503, { message: 'keys unavailable' });
     const { auth, restore } = await fresh();
     await restore();
-    expect(auth.mode).toBe('token');
+    expect(auth.mode).toBe('session');
 
     routes['/web-api/v1/me'] = me();
     routes['/web-api/v1/hub'] = hub;
@@ -253,16 +258,15 @@ describe('when no proxy answers', () => {
     expect(auth).toMatchObject({ mode: 'proxy', signedIn: true, user: 'alice', fallback: '' });
   });
 
-  it('a saved token does not override a working proxy, and a proxy that wants a sign-in still redirects', async () => {
-    session.setItem('sm-auth', JSON.stringify({ hubUrl: '', token: GOOD }));
-    tokenSignInRoutes();
+  it("a proxy that wants a sign-in still redirects, and the hub's own sign-in is not asked", async () => {
+    hubSignIn();
     routes['/web-api/v1/me'] = noSession;
     const { auth, restore } = await fresh();
 
     expect(await restore()).toBe(false);
     expect(auth).toMatchObject({ mode: 'proxy', gate: 'signin', redirecting: true, signedIn: false });
     expect(assigned).toHaveLength(1);
-    expect(calls.some((c) => c.path === '/api/v1/hub')).toBe(false);
+    expect(calls.some((c) => c.path.startsWith('/api/'))).toBe(false);
   });
 
   it('an account the proxy refuses is not sent to the fallback form', async () => {
@@ -275,19 +279,19 @@ describe('when no proxy answers', () => {
 });
 
 describe('without a proxy setting', () => {
-  it('a deployment with no config.json keeps the token sign-in and never calls the proxy path', async () => {
+  it('a deployment with no config.json asks the hub who is signed in and never calls the proxy path', async () => {
     routes = {};
     const { auth, restore } = await fresh();
     expect(await restore()).toBe(false);
-    expect(auth.mode).toBe('token');
-    expect(calls.map((c) => c.path)).toEqual(['/config.json']);
+    expect(auth.mode).toBe('session');
+    expect(calls.map((c) => c.path)).toEqual(['/config.json', '/api/v1/session']);
   });
 
   it('a wrong config.json is reported on the sign-in page', async () => {
     routes['/config.json'] = () => reply(200, { proxy: { apiBase: 'nope' } });
     const { auth, restore } = await fresh();
     expect(await restore()).toBe(false);
-    expect(auth.mode).toBe('token');
+    expect(auth.mode).toBe('session');
     expect(auth.error).toMatch(/config\.json/);
   });
 });

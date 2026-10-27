@@ -1,4 +1,4 @@
-import { auth } from './auth.svelte.js';
+import { auth, getApi } from './auth.svelte.js';
 import { notify } from './notify.svelte.js';
 import { applyStatus, pausePolling } from './status.svelte.js';
 
@@ -23,11 +23,12 @@ let retries = 0;
 let everConnected = false;
 let lastActivity = 0;
 let lastFrameAt = 0;
+/** Bumped on every start and stop, so a ticket that arrives after either opens no socket. */
+let run = 0;
 
-/** The WebSocket address for a hub address ('' means the page's own address). The token never goes in it. */
-export function liveUrl(hubUrl, loc = globalThis.location) {
-  const base = hubUrl || `${loc.protocol}//${loc.host}`;
-  return `${base.replace(/^http/i, 'ws')}/api/v1/live`;
+/** The WebSocket address on the page's own address, where the hub is. No credential ever goes in it. */
+export function liveUrl(loc = globalThis.location) {
+  return `${loc.protocol.replace(/^http/i, 'ws')}//${loc.host}/api/v1/live`;
 }
 
 const bump = () => {
@@ -48,6 +49,7 @@ export function startLive() {
   live.state = 'connecting';
   everConnected = false;
   retries = 0;
+  run++;
   bump();
   for (const type of ACTIVITY) document.addEventListener(type, bump, { passive: true, capture: true });
   document.addEventListener('visibilitychange', onVisibility);
@@ -62,6 +64,7 @@ export function startLive() {
 /** Back to polling. A message, if given, is shown as a notice. */
 export function stopLive(message = '') {
   if (live.state === 'off') return;
+  run++;
   clearInterval(idleTimer);
   clearInterval(pingTimer);
   clearTimeout(retryTimer);
@@ -74,13 +77,27 @@ export function stopLive(message = '') {
   if (message) notify(message, 'info', 9000);
 }
 
-function connect() {
+async function connect() {
   retryTimer = null;
-  const ws = new WebSocket(liveUrl(auth.hubUrl));
+  const current = run;
+  // Signed in with the hub's own sign-in, the first frame carries a ticket that works once, so every connection gets
+  // a fresh one. Behind a sign-in proxy the proxy adds the credential to the upgrade request: there is no first frame.
+  let ticket = null;
+  if (auth.mode !== 'proxy') {
+    try {
+      // A reconnect is the page acting by itself, not someone using it.
+      ({ ticket } = await getApi().liveTicket({ background: everConnected }));
+    } catch {
+      // No ticket is a lost connection, except when the sign-in ended: signing out switches live off by itself.
+      if (current === run && auth.signedIn) lost(1006);
+      return;
+    }
+    if (current !== run) return;
+  }
+  const ws = new WebSocket(liveUrl());
   socket = ws;
-  // Behind a sign-in proxy the proxy adds the credential to the upgrade request, so there is no first frame.
   ws.onopen = () => {
-    if (auth.mode !== 'proxy') ws.send(JSON.stringify({ type: 'auth', token: auth.token }));
+    if (ticket) ws.send(JSON.stringify({ type: 'auth', ticket }));
   };
   ws.onmessage = (event) => {
     lastFrameAt = Date.now();

@@ -1,5 +1,5 @@
 // Optional deployment settings, read from config.json next to index.html (so an admin can edit the built files
-// without rebuilding). Without the file, or with "proxy": false, the dashboard signs in with an API token.
+// without rebuilding). Without the file, or with "proxy": false, people sign in with a user name and password.
 //
 // "proxy" is for a deployment where nginx signs the user in: the page calls the proxy's path on its own site, sends
 // only the marker headers below and never holds a token. true uses every default.

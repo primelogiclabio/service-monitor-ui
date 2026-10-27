@@ -1,12 +1,21 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-// The live module reads the sign-in state and the polling module reads the API client; both are faked so the
-// test drives just the live behaviour: when it connects, what it sends, and when it hands back to polling.
-const auth = { token: 'svm_a_good-token-0000000000000000000000', hubUrl: '', signedIn: true, mode: 'token' };
+// The live module reads the sign-in state and asks the API client for tickets, and the polling module reads the API
+// client too; both are faked so the test drives just the live behaviour: when it connects, what it sends, and when it
+// hands back to polling.
+const auth = { signedIn: true, mode: 'session' };
 let apiCalls;
+let tickets;
+let ticketAnswer;
 vi.mock('../src/lib/auth.svelte.js', () => ({
   auth,
-  getApi: () => ({ status: async () => ({ polled: ++apiCalls }) }),
+  getApi: () => ({
+    status: async () => ({ polled: ++apiCalls }),
+    liveTicket: async (opts) => {
+      tickets.push(opts);
+      return ticketAnswer(tickets.length);
+    },
+  }),
 }));
 
 const { live, startLive, stopLive, toggleLive, liveUrl, IDLE_MS } = await import('../src/lib/live.svelte.js');
@@ -55,10 +64,10 @@ beforeEach(() => {
   vi.stubGlobal('document', doc);
   vi.stubGlobal('WebSocket', FakeSocket);
   vi.stubGlobal('location', { protocol: 'http:', host: 'hub.local:8080' });
-  auth.hubUrl = '';
   auth.signedIn = true;
-  auth.mode = 'token';
-  auth.token = 'svm_a_good-token-0000000000000000000000';
+  auth.mode = 'session';
+  tickets = [];
+  ticketAnswer = async (n) => ({ ticket: `ticket-${n}`, expiresInSeconds: 30 });
   toasts.length = 0;
 });
 
@@ -69,38 +78,85 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+/** Switches live on and waits for its ticket. Returns the socket. */
+async function start() {
+  startLive();
+  await vi.advanceTimersByTimeAsync(0);
+  return last();
+}
+
 /** Switches live on and plays the hub's welcome: open, then the first status. Returns the socket. */
 async function goLive() {
-  startLive();
-  const ws = last();
+  const ws = await start();
   ws.open();
   ws.push(snapshot(1));
   return ws;
 }
 
 describe('liveUrl', () => {
-  it('follows the page when no hub address is set', () => {
-    expect(liveUrl('', { protocol: 'http:', host: 'hub.local:8080' })).toBe('ws://hub.local:8080/api/v1/live');
-    expect(liveUrl('', { protocol: 'https:', host: 'monitor.example.com' })).toBe('wss://monitor.example.com/api/v1/live');
-  });
-
-  it('turns a hub address into its WebSocket address, keeping a sub-path', () => {
-    expect(liveUrl('https://hub.example.com')).toBe('wss://hub.example.com/api/v1/live');
-    expect(liveUrl('http://10.0.0.5:8080')).toBe('ws://10.0.0.5:8080/api/v1/live');
-    expect(liveUrl('https://example.com/monitor')).toBe('wss://example.com/monitor/api/v1/live');
+  it("is on the page's own address, where the hub is", () => {
+    expect(liveUrl({ protocol: 'http:', host: 'hub.local:8080' })).toBe('ws://hub.local:8080/api/v1/live');
+    expect(liveUrl({ protocol: 'https:', host: 'monitor.example.com' })).toBe('wss://monitor.example.com/api/v1/live');
   });
 });
 
 describe('live mode', () => {
-  it('signs in with its first frame and keeps the token out of the address', () => {
+  it('fetches a ticket right before connecting and signs in with it in the first frame, never in the address', async () => {
     startLive();
-    const ws = last();
     expect(live.state).toBe('connecting');
+    expect(FakeSocket.all).toHaveLength(0); // not before the ticket is there
+
+    await vi.advanceTimersByTimeAsync(0);
+    const ws = last();
+    expect(tickets).toEqual([{ background: false }]);
     expect(ws.url).toBe('ws://hub.local:8080/api/v1/live');
-    expect(ws.url).not.toContain(auth.token);
 
     ws.open();
-    expect(ws.sent).toEqual([{ type: 'auth', token: auth.token }]);
+    expect(ws.sent).toEqual([{ type: 'auth', ticket: 'ticket-1' }]);
+  });
+
+  it('gets a fresh ticket for every connection, since a ticket works once', async () => {
+    const first = await goLive();
+    first.drop(1006);
+    await vi.advanceTimersByTimeAsync(2000);
+
+    const second = last();
+    expect(second).not.toBe(first);
+    second.open();
+    expect(second.sent).toEqual([{ type: 'auth', ticket: 'ticket-2' }]);
+    // The reconnect is the page acting by itself, which must not keep the sign-in alive.
+    expect(tickets).toEqual([{ background: false }, { background: true }]);
+  });
+
+  it('gives up with a notice when there is no ticket to be had', async () => {
+    ticketAnswer = async () => {
+      throw new Error('not found');
+    };
+    startLive();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(live.state).toBe('off');
+    expect(FakeSocket.all).toHaveLength(0);
+    expect(toasts.some((t) => t.message.includes('not available'))).toBe(true);
+  });
+
+  it('keeps quiet when the ticket is refused because the sign-in ended', async () => {
+    ticketAnswer = async () => {
+      auth.signedIn = false; // what the API client's 401 no_session does, through signOut()
+      throw new Error('The sign-in has ended');
+    };
+    startLive();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(FakeSocket.all).toHaveLength(0);
+    expect(toasts).toHaveLength(0);
+  });
+
+  it('opens no socket when switched off while the ticket is on its way', async () => {
+    startLive();
+    stopLive();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(FakeSocket.all).toHaveLength(0);
+    expect(live.state).toBe('off');
   });
 
   it('takes over from polling once the first status arrives, and shows every push', async () => {
@@ -123,8 +179,7 @@ describe('live mode', () => {
   it('keeps polling until the hub has actually answered', async () => {
     startPolling(5000);
     await vi.advanceTimersByTimeAsync(0);
-    startLive();
-    last().open();
+    (await start()).open();
 
     await vi.advanceTimersByTimeAsync(5000);
     expect(live.state).toBe('connecting');
@@ -204,9 +259,9 @@ describe('live mode', () => {
   });
 
   it('gives up with a notice when the hub refuses the connection', async () => {
-    startLive();
-    last().open();
-    last().drop(1008);
+    const ws = await start();
+    ws.open();
+    ws.drop(1008);
 
     expect(live.state).toBe('off');
     expect(toasts.some((t) => t.message.includes('refused'))).toBe(true);
@@ -214,17 +269,15 @@ describe('live mode', () => {
     expect(FakeSocket.all).toHaveLength(1);
   });
 
-  it('gives up with a notice when the hub is full', () => {
-    startLive();
-    last().drop(1013);
+  it('gives up with a notice when the hub is full', async () => {
+    (await start()).drop(1013);
 
     expect(live.state).toBe('off');
     expect(toasts.some((t) => t.message.includes('too many'))).toBe(true);
   });
 
   it('does not retry a hub that has never answered', async () => {
-    startLive();
-    last().drop(1006);
+    (await start()).drop(1006);
 
     expect(live.state).toBe('off');
     expect(toasts.some((t) => t.message.includes('not available'))).toBe(true);
@@ -246,6 +299,7 @@ describe('live mode', () => {
   it('the switch toggles it, and does nothing when signed out', async () => {
     toggleLive();
     expect(live.state).toBe('connecting');
+    await vi.advanceTimersByTimeAsync(0);
     toggleLive();
     expect(live.state).toBe('off');
     expect(last().closedWith).toBe(1000);
@@ -256,9 +310,8 @@ describe('live mode', () => {
     expect(FakeSocket.all).toHaveLength(1);
   });
 
-  it('behind a sign-in proxy it sends no first frame, because the proxy adds the credential', async () => {
+  it('behind a sign-in proxy it needs no ticket and sends no first frame, because the proxy adds the credential', async () => {
     auth.mode = 'proxy';
-    auth.token = '';
     startLive();
     const ws = last();
     expect(ws.url).toBe('ws://hub.local:8080/api/v1/live');
@@ -276,6 +329,7 @@ describe('live mode', () => {
     await vi.advanceTimersByTimeAsync(2000);
     expect(FakeSocket.all).toHaveLength(2);
     expect(last().sent).toEqual([]);
+    expect(tickets).toEqual([]);
   });
 
   it('stopping releases the page: no more listeners, no timers', async () => {

@@ -8,8 +8,12 @@ describe('parseHash', () => {
     expect(parseHash('')).toEqual({ name: 'overview', params: {} });
     expect(parseHash('#/checks')).toEqual({ name: 'checks', params: {} });
     expect(parseHash('#/enroll')).toEqual({ name: 'enroll', params: {} });
-    expect(parseHash('#/tokens')).toEqual({ name: 'tokens', params: {} });
+    expect(parseHash('#/settings')).toEqual({ name: 'settings', params: {} });
     expect(parseHash('#/help')).toEqual({ name: 'help', params: {} });
+  });
+  it('opens a section of Settings, and sends the old Tokens page there', () => {
+    expect(parseHash('#/settings/users')).toEqual({ name: 'settings', params: { section: 'users' } });
+    expect(parseHash('#/tokens')).toEqual({ name: 'settings', params: {} });
   });
   it('reads the server id and decodes it', () => {
     expect(parseHash('#/server/abc-123')).toEqual({ name: 'server', params: { id: 'abc-123' } });

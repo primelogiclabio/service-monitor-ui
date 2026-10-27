@@ -11,8 +11,10 @@ export function parseHash(hash) {
       return { name: 'checks', params: {} };
     case 'enroll':
       return { name: 'enroll', params: {} };
-    case 'tokens':
-      return { name: 'tokens', params: {} };
+    case 'settings':
+      return parts[1] ? { name: 'settings', params: { section: parts[1] } } : { name: 'settings', params: {} };
+    case 'tokens': // the page before Settings; old bookmarks still land somewhere useful
+      return { name: 'settings', params: {} };
     case 'help':
       return { name: 'help', params: {} };
     default:

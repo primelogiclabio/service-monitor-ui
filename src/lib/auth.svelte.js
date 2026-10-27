@@ -1,27 +1,33 @@
 import { ApiError, createApi } from './api.js';
 import { loadConfig } from './config.js';
 
-const KEY = 'sm-auth';
 const REDIRECT_KEY = 'sm-signin-redirect';
 /** A second automatic redirect to the sign-in page this soon means signing in is not taking effect: stop looping. */
 const REDIRECT_GUARD_MS = 30_000;
+/** What earlier versions kept in this browser: an API token (!) and the sign-in form's last choice. */
+const OLD_KEYS = ['sm-auth', 'sm-login-mode'];
+
+export const SESSION_ENDED = 'Your sign-in has ended. Sign in again.';
 
 /**
- * Who is signed in. `admin` is discovered from the hub (only ADMIN tokens may list tokens).
- * `mode` is 'token' (an API token pasted by the user) or 'proxy' (nginx signs the user in and adds the credential,
- * so the page holds none). In proxy mode a visitor who is not signed in sees a gate: `gate` says why
- * ('signin', 'forbidden' or 'unreachable') and `error` carries the hub's message. When nothing answers as the proxy
- * ('unreachable'), the page falls back to `mode` 'token' so the token and password forms stay usable; `fallback` then
- * says why, in words for the sign-in page, and `proxy` is kept so the page can offer to try the proxy again.
+ * Who is signed in. `mode` is 'session' (the hub's own user sign-in: a cookie the page cannot read, so the page keeps
+ * no credential) or 'proxy' (nginx signs the user in and adds the credential). `signedIn` means the dashboard may be
+ * used; a user whose password must be changed first has `mustChangePassword` instead, and can do only that.
+ * `role` is 'ADMIN' or 'READ' and `admin` says which.
+ *
+ * In proxy mode a visitor who is not signed in sees a gate: `gate` says why ('signin', 'forbidden' or 'unreachable')
+ * and `error` carries the hub's message. When nothing answers as the proxy ('unreachable'), the page falls back to
+ * `mode` 'session' so the password form stays usable; `fallback` then says why, in words for the sign-in page, and
+ * `proxy` is kept so the page can offer to try the proxy again.
  */
 export const auth = $state({
-  hubUrl: '',
-  token: '',
   admin: false,
+  role: '',
   hub: null,
   error: '',
   signedIn: false,
-  mode: 'token',
+  mustChangePassword: false,
+  mode: 'session',
   user: '',
   proxy: null,
   gate: '',
@@ -32,12 +38,14 @@ export const auth = $state({
 let api = null;
 
 /**
- * Which screen the page shows: 'loading', 'gate' (behind a proxy, not signed in), 'login' or 'app'. While the page is
- * being sent to the proxy's sign-in page it stays on 'loading', so no sign-in screen flashes up before the redirect.
+ * Which screen the page shows: 'loading', 'gate' (behind a proxy, not signed in), 'login', 'change-password' or 'app'.
+ * While the page is being sent to the proxy's sign-in page it stays on 'loading', so no sign-in screen flashes up
+ * before the redirect.
  */
 export function screen(ready) {
   if (!ready || auth.redirecting) return 'loading';
   if (auth.signedIn) return 'app';
+  if (auth.mustChangePassword) return 'change-password';
   return auth.mode === 'proxy' ? 'gate' : 'login';
 }
 
@@ -54,80 +62,74 @@ export function getApi() {
   return api;
 }
 
-function normalizeUrl(url) {
-  return (url ?? '').trim().replace(/\/+$/, '');
-}
-
-function store(remember) {
-  return remember ? localStorage : sessionStorage;
-}
-
-function forget() {
-  for (const s of [sessionStorage, localStorage]) {
+function forgetOldKeys() {
+  for (const name of ['localStorage', 'sessionStorage']) {
     try {
-      s.removeItem(KEY);
+      const store = globalThis[name];
+      for (const key of OLD_KEYS) store.removeItem(key);
     } catch {
-      // storage unavailable
+      // storage unavailable: then nothing was kept there either
     }
   }
 }
 
-/** Verifies a token against the hub and starts a session. Throws with a readable message on failure. */
-export async function login({ hubUrl, token, remember = false }) {
-  const base = normalizeUrl(hubUrl);
-  const candidate = createApi({
-    base,
-    token: token.trim(),
-    // Only a client that became the active session can end it. A rejected sign-in attempt is reported
-    // to the sign-in form by login() throwing, and must not touch an existing session or add a banner.
+function sessionClient() {
+  const client = createApi({
+    // Only a client that became the active session can end it. A rejected sign-in attempt is reported to the form by
+    // signIn() throwing, and must not touch an existing session or add a banner.
     onUnauthorized: () => {
-      if (api === candidate) signOut('Your session was rejected by the hub. Sign in again.');
+      if (api === client) signOut(SESSION_ENDED);
     },
   });
-  const hub = await candidate.hub();
+  return client;
+}
 
-  let admin = false;
-  try {
-    await candidate.tokens();
-    admin = true;
-  } catch (e) {
-    if (e.status !== 403) throw e; // 403 just means a READ token
-  }
-
-  api = candidate;
-  auth.mode = 'token';
-  auth.signedIn = true;
-  auth.hubUrl = base;
-  auth.token = token.trim();
-  auth.user = '';
-  auth.admin = admin;
+/** Makes `client` the session the hub described in `state` (the body of GET or POST /session). */
+async function adopt(client, state) {
+  const must = Boolean(state.mustChangePassword);
+  // The version and the hub's warnings are extras; the dashboard works without them. Until the password is changed
+  // the hub answers nothing else anyway.
+  const hub = must ? null : await client.hub().catch(() => null);
+  api = client;
+  auth.mode = 'session';
+  auth.user = state.user?.name ?? '';
+  auth.role = state.user?.role ?? '';
+  auth.admin = auth.role === 'ADMIN';
+  auth.mustChangePassword = must;
+  auth.signedIn = !must;
   auth.hub = hub;
   auth.error = '';
   auth.gate = '';
-  try {
-    forget();
-    store(remember).setItem(KEY, JSON.stringify({ hubUrl: base, token: token.trim() }));
-  } catch {
-    // The session still works; it just will not survive a reload.
-  }
+  auth.redirecting = false;
+}
+
+/** Signs in with a user name and password. Throws an ApiError (with the hub's `code`) when the hub refuses. */
+export async function signIn({ username, password }) {
+  const client = sessionClient();
+  const state = await client.signIn({ username: username.trim(), password });
+  if (!state?.signedIn) throw new ApiError(500, 'The hub did not sign you in');
+  await adopt(client, state);
 }
 
 /**
- * Signs in as the hub's own administrator. The hub checks the password and answers with a token that ends after a
- * few hours; from there it is an ordinary token session, and only the token is kept, never the password.
+ * Changes the signed-in user's own password. The hub renews the sign-in itself; a user who had to change it may now
+ * go on to the dashboard. Errors (`wrong_password`, `weak_password`, `same_password`) are thrown and leave the user
+ * signed in.
  */
-export async function loginWithPassword({ hubUrl, username, password, remember = false }) {
-  const base = normalizeUrl(hubUrl);
-  const session = await createApi({ base }).passwordLogin({ username: username.trim(), password });
-  await login({ hubUrl: base, token: session.token, remember });
+export async function changePassword({ currentPassword, newPassword }) {
+  const client = api;
+  if (!client) throw new ApiError(401, SESSION_ENDED, 'no_session');
+  await client.changePassword({ currentPassword, newPassword });
+  if (auth.mustChangePassword) await adopt(client, { user: { name: auth.user, role: auth.role }, mustChangePassword: false });
 }
 
 /**
- * Finds the proxy's session, or resumes a saved token session. Returns true when signed in. When a proxy is set but
- * nothing answers as one (the hub reached on its own address through an SSH tunnel, or the sign-in service is down),
- * the token and password sign-in takes over, so the dashboard is never stuck behind a gate with no way in.
+ * Finds the proxy's session, or the hub's own sign-in. Returns true when signed in. When a proxy is set but nothing
+ * answers as one (the hub reached on its own address through an SSH tunnel, or the sign-in service is down), the
+ * password sign-in takes over, so the dashboard is never stuck behind a gate with no way in.
  */
 export async function restore() {
+  forgetOldKeys();
   let config;
   try {
     config = await loadConfig();
@@ -138,35 +140,27 @@ export async function restore() {
   if (config.proxy) {
     if (await startProxy(config.proxy, { auto: true })) return true;
     if (auth.gate !== 'unreachable') return false; // 401 and 403 are the proxy answering: its gate is the way on
-    auth.mode = 'token';
+    auth.mode = 'session';
     auth.gate = '';
     auth.error = '';
   }
-  return resumeSaved();
+  return resumeSession();
 }
 
-/** Signs in again from the token saved in this browser, if there is one. */
-async function resumeSaved() {
-  let saved = null;
-  for (const s of [sessionStorage, localStorage]) {
-    try {
-      const raw = s.getItem(KEY);
-      if (raw) {
-        saved = { ...JSON.parse(raw), remember: s === localStorage };
-        break;
-      }
-    } catch {
-      // ignore unreadable storage
-    }
-  }
-  if (!saved?.token) return false;
+/** Asks the hub whether this browser is signed in already. */
+async function resumeSession() {
+  const client = sessionClient();
+  let state;
   try {
-    await login(saved);
-    return true;
+    state = await client.session();
   } catch (e) {
-    auth.error = e.message;
+    // Only an unreachable hub is worth a banner; any other answer just means there is nothing to resume.
+    if (e.status === 0) auth.error = e.message;
     return false;
   }
+  if (!state?.signedIn) return false;
+  await adopt(client, state);
+  return auth.signedIn;
 }
 
 /**
@@ -189,9 +183,9 @@ export async function startProxy(settings, { auto = false } = {}) {
     auth.mode = 'proxy';
     auth.proxy = settings;
     auth.signedIn = true;
-    auth.token = '';
-    auth.hubUrl = '';
+    auth.mustChangePassword = false;
     auth.user = me.name ?? '';
+    auth.role = me.scope ?? '';
     auth.admin = me.scope === 'ADMIN';
     auth.hub = hub;
     auth.error = '';
@@ -204,7 +198,9 @@ export async function startProxy(settings, { auto = false } = {}) {
     auth.mode = 'proxy';
     auth.proxy = settings;
     auth.signedIn = false;
+    auth.mustChangePassword = false;
     auth.user = '';
+    auth.role = '';
     auth.hub = null;
     auth.admin = false;
     auth.gate = e.status === 401 ? 'signin' : e.status === 403 ? 'forbidden' : 'unreachable';
@@ -225,6 +221,7 @@ function endProxySession(gate, message) {
   api = null;
   auth.signedIn = false;
   auth.admin = false;
+  auth.role = '';
   auth.hub = null;
   auth.user = '';
   auth.gate = gate;
@@ -257,8 +254,11 @@ export function redirectToSignIn({ guarded = false } = {}) {
   return true;
 }
 
-/** The Sign out button: in proxy mode the proxy owns the session, so leave through its sign-out address. */
-export function logout() {
+/**
+ * The Sign out button. In proxy mode the proxy owns the session, so leave through its sign-out address; otherwise
+ * the hub ends the sign-in and clears its cookie, which the page cannot do itself.
+ */
+export async function logout() {
   if (auth.mode === 'proxy') {
     const url = auth.proxy?.signOutUrl;
     api = null;
@@ -268,15 +268,23 @@ export function logout() {
     if (url) location.assign(url);
     return;
   }
-  signOut();
+  const client = api ?? sessionClient();
+  try {
+    await client.signOut();
+    signOut();
+  } catch {
+    signOut('The hub could not be reached to end the sign-in. It ends by itself after a while without use.');
+  }
 }
 
+/** Forgets the session on this page only; see logout() for ending it at the hub. */
 export function signOut(message = '') {
   api = null;
   auth.signedIn = false;
-  auth.token = '';
+  auth.mustChangePassword = false;
   auth.admin = false;
+  auth.role = '';
+  auth.user = '';
   auth.hub = null;
   auth.error = message;
-  forget();
 }

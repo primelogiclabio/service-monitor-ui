@@ -1,14 +1,19 @@
-// Client for the hub's REST API. Takes the hub base URL ('' for same origin) and a bearer token. Behind a sign-in
-// proxy there is no token: `proxy` ({ apiBase, headers }) sends the calls to the proxy's path on this site with its
-// marker headers, and the proxy adds the credential. The browser never holds one.
+// Client for the hub's REST API, on this page's own address. A signed-in user is known to the hub by a cookie the page
+// never sees, so the page holds no credential at all. Behind a sign-in proxy, `proxy` ({ apiBase, headers }) sends the
+// calls to the proxy's path on this site with its marker headers, and the proxy adds the credential.
 
 export class ApiError extends Error {
-  constructor(status, message) {
+  constructor(status, message, code = '') {
     super(message);
     this.name = 'ApiError';
     this.status = status;
+    /** The hub's error code, such as `wrong_password`; empty when the answer had none. */
+    this.code = code;
   }
 }
+
+/** The 401 codes that mean the sign-in itself is over. A 401 for anything else (a wrong password) is not. */
+const SIGNED_OUT = new Set(['no_session', 'unauthorized']);
 
 function query(params) {
   const p = new URLSearchParams();
@@ -17,14 +22,24 @@ function query(params) {
   return s ? `?${s}` : '';
 }
 
-export function createApi({ base = '', token = '', proxy = null, fetchImpl, onUnauthorized } = {}) {
+export function createApi({ proxy = null, fetchImpl, onUnauthorized } = {}) {
   const send = fetchImpl ?? ((...args) => fetch(...args));
   const id = encodeURIComponent;
-  const root = proxy ? `${proxy.apiBase}/v1` : `${base}/api/v1`;
+  const root = proxy ? `${proxy.apiBase}/v1` : '/api/v1';
 
-  async function request(method, path, body) {
-    const headers = { Accept: 'application/json', ...(proxy?.headers ?? {}) };
-    if (token && !proxy) headers.Authorization = `Bearer ${token}`;
+  /**
+   * `background` marks a call the page makes by itself (status polling), which the hub does not count as use, so a
+   * page left open still signs out when nobody is at it.
+   */
+  async function request(method, path, body, { background = false } = {}) {
+    const headers = { Accept: 'application/json' };
+    if (proxy) {
+      Object.assign(headers, proxy.headers);
+    } else {
+      // The hub refuses a cookie-signed change without it: a page on another site cannot add it without asking.
+      headers['X-Svcmon-Request'] = '1';
+      if (background) headers['X-Svcmon-Background'] = '1';
+    }
     if (body !== undefined) headers['Content-Type'] = 'application/json';
 
     let res;
@@ -32,6 +47,7 @@ export function createApi({ base = '', token = '', proxy = null, fetchImpl, onUn
       res = await send(`${root}${path}`, {
         method,
         headers,
+        credentials: 'same-origin',
         body: body === undefined ? undefined : JSON.stringify(body),
       });
     } catch (e) {
@@ -47,8 +63,10 @@ export function createApi({ base = '', token = '', proxy = null, fetchImpl, onUn
       // not JSON; fall back to the raw text for the error message
     }
     if (!res.ok) {
-      if (res.status === 401) onUnauthorized?.();
-      throw new ApiError(res.status, data?.message ?? (text || res.statusText));
+      const code = typeof data?.error === 'string' ? data.error : '';
+      // A proxy's own 401 carries no hub code; any 401 there means its sign-in ended.
+      if (res.status === 401 && (proxy || SIGNED_OUT.has(code))) onUnauthorized?.();
+      throw new ApiError(res.status, data?.message ?? (text || res.statusText), code);
     }
     return data;
   }
@@ -57,9 +75,19 @@ export function createApi({ base = '', token = '', proxy = null, fetchImpl, onUn
     request,
     hub: () => request('GET', '/hub'),
     me: () => request('GET', '/me'),
-    /** The hub's own administrator: answers with an ADMIN token that ends after a few hours. */
-    passwordLogin: (body) => request('POST', '/login', body),
-    status: () => request('GET', '/status'),
+    session: () => request('GET', '/session'),
+    signIn: (body) => request('POST', '/session', body),
+    signOut: () => request('DELETE', '/session'),
+    liveTicket: (opts) => request('POST', '/session/live-ticket', undefined, opts),
+    changePassword: (body) => request('PUT', '/me/password', body),
+    sessions: () => request('GET', '/sessions'),
+    endSession: (sessionId) => request('DELETE', `/sessions/${id(sessionId)}`),
+    users: () => request('GET', '/users'),
+    createUser: (body) => request('POST', '/users', body),
+    updateUser: (userId, patch) => request('PATCH', `/users/${id(userId)}`, patch),
+    resetPassword: (userId) => request('POST', `/users/${id(userId)}/password-reset`),
+    deleteUser: (userId) => request('DELETE', `/users/${id(userId)}`),
+    status: (opts) => request('GET', '/status', undefined, opts),
     checks: () => request('GET', '/checks'),
     check: (checkId) => request('GET', `/checks/${id(checkId)}`),
     createCheck: (body) => request('POST', '/checks', body),
@@ -72,7 +100,6 @@ export function createApi({ base = '', token = '', proxy = null, fetchImpl, onUn
     updateServer: (serverId, patch) => request('PATCH', `/servers/${id(serverId)}`, patch),
     deleteServer: (serverId) => request('DELETE', `/servers/${id(serverId)}`),
     tokens: () => request('GET', '/tokens'),
-    createToken: (body) => request('POST', '/tokens', body),
     revokeToken: (tokenId) => request('DELETE', `/tokens/${id(tokenId)}`),
     enrollmentToken: (body) => request('POST', '/enrollment-tokens', body),
     joinKeys: () => request('GET', '/join-keys'),
