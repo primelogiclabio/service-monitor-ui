@@ -1,6 +1,6 @@
 # Service Monitor UI
 
-The web dashboard for [service-monitor](https://github.com/primelogiclabio/service-monitor): a static single-page app with no server of its own. It talks to the hub's REST API on its own address and holds no credential: people sign in with a user name and password and the hub keeps them signed in with a cookie the page cannot read, or a sign-in proxy adds the credential. A hub release carries a build of it inside its jar, so most people never run this repository.
+The web dashboard for [service-monitor](https://github.com/primelogiclabio/service-monitor): a static single-page app with no server of its own. It talks to the hub's REST API on its own address and holds no credential: people sign in with a user name and password and the hub keeps them signed in with a cookie the page cannot read. A hub release carries a build of it inside its jar, so most people never run this repository.
 
 ## Stack
 
@@ -31,15 +31,9 @@ Status always has a shape and a word as well as a colour. Light and dark themes 
 - **User name and password:** every person has an account on the hub, as an administrator (changes anything) or read-only (looks, and changes only their own password). A new hub has the account `admin` with the password `admin`; it works only from the hub's internal network, and the dashboard asks for a new password straight away. The same goes for the temporary password an administrator gets when adding a user or resetting a password under **Settings**. The hub signs you in with an `HttpOnly` cookie, so this page never sees a credential and keeps nothing in browser storage; it sends `X-Svcmon-Request: 1` with every call, which the hub requires so other sites cannot use the cookie. A sign-in ends after a while without use (the page's own refreshing does not count) and the page then returns to the sign-in form. Repeated wrong attempts make the hub ask you to wait, and the page says how long.
 - **From outside the internal network:** a hub lets people in only from its internal network unless it is set to allow outside access, and then over HTTPS only. The page asks the hub (`GET /api/v1/session`) how it sees the browser, and where the hub refuses it, it says so instead of showing the form, with a **Check again** button for after joining the VPN. A browser that leaves the network while signed in is taken to the same page.
 - **The CLI and scripts** keep using API tokens (`svcmon token create`); Settings lists them for revoking. An older dashboard kept a token in browser storage; this one deletes it when it loads.
-- **Behind a sign-in proxy:** where nginx and a gateway sign people in, the page never holds a token and shows no form while the proxy answers. It calls `<apiBase>/v1/...` on its own site, sending only the marker `headers` your proxy must require, and asks `GET <apiBase>/v1/me` who is signed in. No session (401) goes to `signInUrl` once; an account the proxy refuses (403) gets a page that says so. If nothing answers as the proxy, the page falls back to the password form and says why. The hub's [reference](https://github.com/primelogiclabio/service-monitor/blob/main/docs/service-monitor-reference.md#sign-in-with-keycloak-or-another-openid-connect-provider) covers the proxy side.
+- **Behind a sign-in gateway** (Keycloak through nginx, say): the gateway is only a gate. Its sign-in comes first, then the hub's own form, and the page calls the hub's `/api/` as always. When the gateway's sign-in ends, the 401 it answers in the hub's place (any 401 without one of the hub's codes, such as `gateway_sign_in`) makes the page reload once, so the gateway can ask again; a second one within 30 seconds is reported instead of reloading in a loop. The hub's [reference](https://github.com/primelogiclabio/service-monitor/blob/main/docs/service-monitor-reference.md#behind-a-sign-in-gateway) has the nginx side.
 
-Switch the proxy mode on where the page's settings live. In the hub jar that is `svcmon.ui.proxy` in the hub's `application.yml` (`enabled: true` uses the defaults below). For a copy of `dist/` hosted elsewhere it is `config.json` beside `index.html`, which needs no rebuild:
-
-```json
-{ "proxy": { "apiBase": "/web-api", "headers": { "X-Web-Client": "1" }, "signInUrl": "/oauth2/start", "signOutUrl": "/oauth2/sign_out" } }
-```
-
-`"proxy": true` means exactly those values and `"proxy": false` (the shipped file) means the password sign-in. A wrong setting (an unknown key, an `Authorization` header, a `javascript:` address) is reported instead of being ignored. The file is public and holds no secrets.
+`config.json` beside `index.html` holds no settings any more: the shipped file is `{}`. One from the proxy sign-in days, with a `"proxy"` setting, is reported on the sign-in page instead of being ignored, and the form still works; remove the setting.
 
 ## Develop
 
@@ -77,7 +71,7 @@ The hub's settings are in its [reference](https://github.com/primelogiclabio/ser
 ```text
 src/lib/         api client, formatting, routing, auth/status/theme state, config.json reader
 src/components/  status badge, charts, check table, forms, dialogs
-src/views/       dashboard, server, monitors, add server, settings, sign-in, password change, proxy gate, refusal
+src/views/       dashboard, server, monitors, add server, settings, sign-in, password change, refusal
 public/          config.json (copied into dist/ as is)
 scripts/         demo data seeder
 test/            unit tests

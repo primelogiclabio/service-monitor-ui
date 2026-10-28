@@ -1,6 +1,5 @@
 // Client for the hub's REST API, on this page's own address. A signed-in user is known to the hub by a cookie the page
-// never sees, so the page holds no credential at all. Behind a sign-in proxy, `proxy` ({ apiBase, headers }) sends the
-// calls to the proxy's path on this site with its marker headers, and the proxy adds the credential.
+// never sees, so the page holds no credential at all.
 
 import { isRefusal } from './access.js';
 
@@ -17,6 +16,9 @@ export class ApiError extends Error {
 /** The 401 codes that mean the sign-in itself is over. A 401 for anything else (a wrong password) is not. */
 const SIGNED_OUT = new Set(['no_session', 'unauthorized']);
 
+/** Every 401 code the hub itself sends. A 401 without one of these came from a gateway in front of the hub. */
+const HUB_401 = new Set([...SIGNED_OUT, 'wrong_credentials']);
+
 function query(params) {
   const p = new URLSearchParams();
   for (const [k, v] of Object.entries(params ?? {})) if (v != null) p.set(k, String(v));
@@ -24,24 +26,23 @@ function query(params) {
   return s ? `?${s}` : '';
 }
 
-export function createApi({ proxy = null, fetchImpl, onUnauthorized, onRefused } = {}) {
+/**
+ * `onUnauthorized` hears when the hub says the sign-in is over, `onRefused` when it refuses the browser for where it
+ * is, and `onGateway` when a sign-in gateway in front of the hub answered instead (its own sign-in ended).
+ */
+export function createApi({ fetchImpl, onUnauthorized, onRefused, onGateway } = {}) {
   const send = fetchImpl ?? ((...args) => fetch(...args));
   const id = encodeURIComponent;
-  const root = proxy ? `${proxy.apiBase}/v1` : '/api/v1';
+  const root = '/api/v1';
 
   /**
    * `background` marks a call the page makes by itself (status polling), which the hub does not count as use, so a
    * page left open still signs out when nobody is at it.
    */
   async function request(method, path, body, { background = false } = {}) {
-    const headers = { Accept: 'application/json' };
-    if (proxy) {
-      Object.assign(headers, proxy.headers);
-    } else {
-      // The hub refuses a cookie-signed change without it: a page on another site cannot add it without asking.
-      headers['X-Svcmon-Request'] = '1';
-      if (background) headers['X-Svcmon-Background'] = '1';
-    }
+    // The hub refuses a cookie-signed change without it: a page on another site cannot add it without asking.
+    const headers = { Accept: 'application/json', 'X-Svcmon-Request': '1' };
+    if (background) headers['X-Svcmon-Background'] = '1';
     if (body !== undefined) headers['Content-Type'] = 'application/json';
 
     let res;
@@ -66,8 +67,8 @@ export function createApi({ proxy = null, fetchImpl, onUnauthorized, onRefused }
     }
     if (!res.ok) {
       const code = typeof data?.error === 'string' ? data.error : '';
-      // A proxy's own 401 carries no hub code; any 401 there means its sign-in ended.
-      if (res.status === 401 && (proxy || SIGNED_OUT.has(code))) onUnauthorized?.();
+      if (res.status === 401 && SIGNED_OUT.has(code)) onUnauthorized?.();
+      if (res.status === 401 && !HUB_401.has(code)) onGateway?.();
       // Refused for where the browser is (it moved off the internal network, say): no request from here will work.
       if (res.status === 403 && isRefusal(code)) onRefused?.(code);
       throw new ApiError(res.status, data?.message ?? (text || res.statusText), code);

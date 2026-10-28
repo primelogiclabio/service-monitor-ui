@@ -69,7 +69,7 @@ describe('opening the page', () => {
     const { auth, getApi, restore, screen } = await fresh();
 
     expect(await restore()).toBe(true);
-    expect(auth).toMatchObject({ mode: 'session', signedIn: true, user: 'alice', role: 'ADMIN', admin: true, mustChangePassword: false, error: '' });
+    expect(auth).toMatchObject({ signedIn: true, user: 'alice', role: 'ADMIN', admin: true, mustChangePassword: false, error: '' });
     expect(auth.hub.version).toBe('0.2.0');
     expect(getApi()).not.toBeNull();
     expect(screen(true)).toBe('app');
@@ -91,7 +91,7 @@ describe('opening the page', () => {
   it('shows the sign-in form when the hub has no sign-in for this browser', async () => {
     const { auth, getApi, restore, screen } = await fresh();
     expect(await restore()).toBe(false);
-    expect(auth).toMatchObject({ mode: 'session', signedIn: false, error: '' });
+    expect(auth).toMatchObject({ signedIn: false, error: '' });
     expect(getApi()).toBeNull();
     expect(screen(true)).toBe('login');
     expect(callsTo('GET /api/v1/hub')).toHaveLength(0);
@@ -278,6 +278,60 @@ describe('a password that must be changed', () => {
     expect(callsTo('DELETE /api/v1/session')).toHaveLength(1);
     expect(auth).toMatchObject({ signedIn: false, mustChangePassword: false, user: '' });
     expect(screen(true)).toBe('login');
+  });
+});
+
+describe('behind a sign-in gateway', () => {
+  const gatewaySaysSignIn = () => reply(401, { error: 'gateway_sign_in', message: 'Sign in at the gateway first' });
+
+  it('reloads the page once when the gateway sign-in ends, so the gateway can ask again', async () => {
+    const reload = vi.fn();
+    vi.stubGlobal('location', { reload });
+    routes['GET /api/v1/session'] = () => reply(200, signedIn('ADMIN'));
+    const { auth, getApi, restore } = await fresh();
+    await restore();
+
+    routes['GET /api/v1/status'] = gatewaySaysSignIn;
+    await expect(getApi().status()).rejects.toMatchObject({ status: 401, code: 'gateway_sign_in' });
+    expect(reload).toHaveBeenCalledOnce();
+    expect(session.setItem).toHaveBeenCalledWith('sm-gateway-reload', expect.any(String));
+    expect(auth.signedIn).toBe(true); // the reload takes the page away; nothing to undo first
+  });
+
+  it('says so instead of reloading in a loop when the gateway keeps answering', async () => {
+    const reload = vi.fn();
+    vi.stubGlobal('location', { reload });
+    session.setItem('sm-gateway-reload', String(Date.now() - 1000));
+    routes['GET /api/v1/session'] = () => reply(200, signedIn('ADMIN'));
+    const { auth, GATEWAY_STUCK, getApi, restore, screen } = await fresh();
+    await restore();
+
+    routes['GET /api/v1/status'] = gatewaySaysSignIn;
+    await expect(getApi().status()).rejects.toMatchObject({ code: 'gateway_sign_in' });
+    expect(reload).not.toHaveBeenCalled();
+    expect(auth).toMatchObject({ signedIn: false, error: GATEWAY_STUCK });
+    expect(screen(true)).toBe('login');
+  });
+
+  it('a hub that answers itself never makes the page reload', async () => {
+    const reload = vi.fn();
+    vi.stubGlobal('location', { reload });
+    routes['GET /api/v1/session'] = () => reply(200, signedIn('ADMIN'));
+    const { getApi, restore } = await fresh();
+    await restore();
+    routes['GET /api/v1/status'] = () => reply(401, { error: 'no_session', message: 'The sign-in has ended; sign in again' });
+    await expect(getApi().status()).rejects.toMatchObject({ code: 'no_session' });
+    expect(reload).not.toHaveBeenCalled();
+  });
+
+  it('a config.json from the proxy sign-in days is reported, and the form still works', async () => {
+    routes['GET /config.json'] = () => reply(200, { proxy: { apiBase: '/web-api', headers: { 'X-PLL-Web': '1' } } });
+    const { auth, restore, screen } = await fresh();
+    expect(await restore()).toBe(false);
+    expect(auth.error).toMatch(/"proxy" was removed/);
+    expect(screen(true)).toBe('login');
+    expect(callsTo('GET /api/v1/session')).toHaveLength(1);
+    expect(calls.some((c) => c.key.includes('/web-api'))).toBe(false);
   });
 });
 

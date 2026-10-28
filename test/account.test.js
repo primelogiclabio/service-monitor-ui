@@ -32,10 +32,6 @@ describe('sign-in messages', () => {
     );
   });
 
-  it('point to the hub’s own address when the page fell back from a sign-in proxy', () => {
-    expect(signInMessage(refusal(404, 'not_found'), { fallback: 'the sign-in service answered 503' })).toMatch(/hub through its own address/);
-  });
-
   it("fall back to the hub's message, or to a plain one", () => {
     expect(signInMessage(new ApiError(0, 'Cannot reach the hub (Failed to fetch)'))).toBe('Cannot reach the hub (Failed to fetch)');
     expect(signInMessage(new ApiError(500, ''))).toBe('Signing in failed.');
