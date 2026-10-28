@@ -138,7 +138,7 @@
         </thead>
         <tbody>
           {#each users as u (u.id)}
-            {@const self = auth.mode === 'session' && u.username === auth.user}
+            {@const self = u.username === auth.user}
             <tr>
               <td>{u.username}{#if self}<span class="source-tag">you</span>{/if}</td>
               <td>{roleLabel(u.role)}</td>

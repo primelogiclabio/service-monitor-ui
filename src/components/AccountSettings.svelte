@@ -21,10 +21,7 @@
       loaded = true;
     }
   }
-  // Behind a sign-in proxy the account and its sign-ins belong to the proxy's provider, not to the hub.
-  onMount(() => {
-    if (auth.mode === 'session') load();
-  });
+  onMount(load);
 
   async function end(s) {
     ending = s.id;
@@ -45,57 +42,47 @@
   }
 </script>
 
-{#if auth.mode !== 'session'}
-  <section class="card stack">
-    <h2>Your account</h2>
+<section class="card stack" aria-labelledby="acct-pw">
+  <div>
+    <h2 id="acct-pw">Change your password</h2>
     <p class="secondary">
-      Signed in as <strong>{auth.user}</strong> through the sign-in service, with {auth.admin ? 'administrator' : 'read-only'}
-      access. Your password and sign-ins are managed there.
+      Signed in as <strong>{auth.user}</strong>, with {auth.admin ? 'administrator' : 'read-only'} access. Changing the
+      password signs you out everywhere else.
     </p>
-  </section>
-{:else}
-  <section class="card stack" aria-labelledby="acct-pw">
-    <div>
-      <h2 id="acct-pw">Change your password</h2>
-      <p class="secondary">
-        Signed in as <strong>{auth.user}</strong>, with {auth.admin ? 'administrator' : 'read-only'} access. Changing the
-        password signs you out everywhere else.
-      </p>
-    </div>
-    <div style="max-width: 420px"><PasswordForm onchanged={changed} /></div>
-  </section>
+  </div>
+  <div style="max-width: 420px"><PasswordForm onchanged={changed} /></div>
+</section>
 
-  <section class="card stack" aria-labelledby="acct-sessions">
-    <h2 id="acct-sessions">Where you are signed in</h2>
-    {#if !loaded}
-      <p class="muted">Loading…</p>
-    {:else if error}
-      <p class="form-error" role="alert">{error}</p>
-    {:else if sessions.length === 0}
-      <p class="muted">No sign-ins.</p>
-    {:else}
-      <div class="table-wrap">
-        <table class="data">
-          <thead>
-            <tr><th>Browser</th><th class="hide-sm">Address</th><th class="hide-sm">Signed in</th><th>Last active</th><th></th></tr>
-          </thead>
-          <tbody>
-            {#each sessions as s (s.id)}
-              <tr>
-                <td>{describeBrowser(s.userAgent)}{#if s.current}<span class="source-tag">this browser</span>{/if}</td>
-                <td class="hide-sm">{s.clientAddress ?? '—'}</td>
-                <td class="hide-sm">{fmtDateTime(s.createdAt)}</td>
-                <td title={fmtDateTime(s.lastSeenAt)}>{ago(s.lastSeenAt)}</td>
-                <td class="num">
-                  {#if !s.current}
-                    <button class="btn small" type="button" title="Sign this browser out" disabled={ending === s.id} onclick={() => end(s)}>End</button>
-                  {/if}
-                </td>
-              </tr>
-            {/each}
-          </tbody>
-        </table>
-      </div>
-    {/if}
-  </section>
-{/if}
+<section class="card stack" aria-labelledby="acct-sessions">
+  <h2 id="acct-sessions">Where you are signed in</h2>
+  {#if !loaded}
+    <p class="muted">Loading…</p>
+  {:else if error}
+    <p class="form-error" role="alert">{error}</p>
+  {:else if sessions.length === 0}
+    <p class="muted">No sign-ins.</p>
+  {:else}
+    <div class="table-wrap">
+      <table class="data">
+        <thead>
+          <tr><th>Browser</th><th class="hide-sm">Address</th><th class="hide-sm">Signed in</th><th>Last active</th><th></th></tr>
+        </thead>
+        <tbody>
+          {#each sessions as s (s.id)}
+            <tr>
+              <td>{describeBrowser(s.userAgent)}{#if s.current}<span class="source-tag">this browser</span>{/if}</td>
+              <td class="hide-sm">{s.clientAddress ?? '—'}</td>
+              <td class="hide-sm">{fmtDateTime(s.createdAt)}</td>
+              <td title={fmtDateTime(s.lastSeenAt)}>{ago(s.lastSeenAt)}</td>
+              <td class="num">
+                {#if !s.current}
+                  <button class="btn small" type="button" title="Sign this browser out" disabled={ending === s.id} onclick={() => end(s)}>End</button>
+                {/if}
+              </td>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+    </div>
+  {/if}
+</section>

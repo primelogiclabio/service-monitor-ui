@@ -17,8 +17,8 @@ export function roleLabel(role) {
   return ROLES.find((r) => r.value === role)?.label ?? role;
 }
 
-/** What to say when signing in failed. `fallback` is set when the page fell back from a sign-in proxy. */
-export function signInMessage(err, { fallback = '' } = {}) {
+/** What to say when signing in failed. */
+export function signInMessage(err) {
   switch (err?.code) {
     case 'wrong_credentials':
       return 'Wrong user name or password.';
@@ -27,10 +27,7 @@ export function signInMessage(err, { fallback = '' } = {}) {
     case 'too_many_attempts':
       return err.message; // it says how long to wait
     case 'not_found':
-      // Behind a sign-in proxy the password sign-in may be kept off the public address on purpose.
-      return fallback
-        ? "Sign-in with a user name and password is not offered on this address. Open the hub through its own address."
-        : 'Sign-in with a user name and password is turned off on this hub.';
+      return 'Sign-in with a user name and password is turned off on this hub.';
     case 'cross_site':
       return "The hub refused the request because it did not come from the hub's own page. Open the dashboard at the hub's address.";
     default:

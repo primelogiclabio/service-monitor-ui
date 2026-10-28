@@ -1,5 +1,5 @@
 <script>
-  import { auth, restore, signIn } from '../lib/auth.svelte.js';
+  import { auth, signIn } from '../lib/auth.svelte.js';
   import { signInMessage } from '../lib/account.js';
   import { theme, cycleTheme } from '../lib/theme.svelte.js';
   import Tip from '../components/Tip.svelte';
@@ -8,15 +8,6 @@
   let password = $state('');
   let busy = $state(false);
   let error = $state('');
-
-  async function retryProxy() {
-    busy = true;
-    try {
-      await restore();
-    } finally {
-      busy = false;
-    }
-  }
 
   async function submit(e) {
     e.preventDefault();
@@ -29,7 +20,7 @@
     try {
       await signIn({ username, password });
     } catch (err) {
-      error = signInMessage(err, { fallback: auth.fallback });
+      error = signInMessage(err);
     } finally {
       password = '';
       busy = false;
@@ -45,12 +36,6 @@
     </div>
 
     {#if auth.error}<div class="banner warn" role="status">{auth.error}</div>{/if}
-    {#if auth.fallback}
-      <div class="banner warn stack" role="status">
-        <span>Single sign-in is not available here: {auth.fallback}. Sign in with your user name and password instead.</span>
-        <div class="row"><button class="btn small" type="button" onclick={retryProxy} disabled={busy}>Try single sign-in again</button></div>
-      </div>
-    {/if}
 
     <form class="stack" onsubmit={submit} novalidate>
       <div class="field">

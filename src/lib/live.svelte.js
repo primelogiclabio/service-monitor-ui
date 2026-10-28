@@ -80,20 +80,17 @@ export function stopLive(message = '') {
 async function connect() {
   retryTimer = null;
   const current = run;
-  // Signed in with the hub's own sign-in, the first frame carries a ticket that works once, so every connection gets
-  // a fresh one. Behind a sign-in proxy the proxy adds the credential to the upgrade request: there is no first frame.
-  let ticket = null;
-  if (auth.mode !== 'proxy') {
-    try {
-      // A reconnect is the page acting by itself, not someone using it.
-      ({ ticket } = await getApi().liveTicket({ background: everConnected }));
-    } catch {
-      // No ticket is a lost connection, except when the sign-in ended: signing out switches live off by itself.
-      if (current === run && auth.signedIn) lost(1006);
-      return;
-    }
-    if (current !== run) return;
+  // The first frame carries a ticket that works once, so every connection gets a fresh one.
+  let ticket;
+  try {
+    // A reconnect is the page acting by itself, not someone using it.
+    ({ ticket } = await getApi().liveTicket({ background: everConnected }));
+  } catch {
+    // No ticket is a lost connection, except when the sign-in ended: signing out switches live off by itself.
+    if (current === run && auth.signedIn) lost(1006);
+    return;
   }
+  if (current !== run) return;
   const ws = new WebSocket(liveUrl());
   socket = ws;
   ws.onopen = () => {

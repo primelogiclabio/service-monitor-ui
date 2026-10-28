@@ -42,27 +42,6 @@ describe('createApi', () => {
     expect(headers).toEqual(['1', undefined, '1']);
   });
 
-  it('behind a sign-in proxy it calls the proxy path with its marker headers and nothing else', async () => {
-    const fetchImpl = vi.fn(async () => reply(200, { name: 'alice', scope: 'ADMIN' }));
-    const proxy = { apiBase: '/web-api', headers: { 'X-PLL-Web': '1' } };
-    const api = createApi({ proxy, fetchImpl });
-    expect(await api.me()).toEqual({ name: 'alice', scope: 'ADMIN' });
-    await api.createCheck({ name: 'x' });
-    await api.status({ background: true });
-    const [url, init] = fetchImpl.mock.calls[0];
-    expect(url).toBe('/web-api/v1/me');
-    expect(init.headers['X-PLL-Web']).toBe('1');
-    expect(init.headers.Authorization).toBeUndefined();
-    const [postUrl, post] = fetchImpl.mock.calls[1];
-    expect(postUrl).toBe('/web-api/v1/checks');
-    expect(post.headers['X-PLL-Web']).toBe('1');
-    expect(post.headers['Content-Type']).toBe('application/json');
-    for (const [, i] of fetchImpl.mock.calls) {
-      expect(i.headers['X-Svcmon-Request']).toBeUndefined();
-      expect(i.headers['X-Svcmon-Background']).toBeUndefined();
-    }
-  });
-
   it('sends JSON bodies with a content type', async () => {
     const fetchImpl = vi.fn(async () => reply(201, { id: 'c1' }));
     const api = createApi({ fetchImpl });
@@ -134,10 +113,22 @@ describe('createApi', () => {
     expect(seen).toEqual(['GET /api/v1/access']);
   });
 
-  it("behind a proxy any 401 means its sign-in ended, since the proxy's own answer has no hub code", async () => {
+  it('hands a 401 the hub did not send to the gateway handler, and no hub 401', async () => {
+    const answers = [
+      reply(401, { error: 'gateway_sign_in', message: 'Sign in at the gateway first' }),
+      reply(401, ''),
+      reply(401, { error: 'no_session', message: 'The sign-in has ended' }),
+      reply(401, { error: 'wrong_credentials', message: 'Wrong user name or password' }),
+    ];
+    const onGateway = vi.fn();
     const onUnauthorized = vi.fn();
-    const api = createApi({ proxy: { apiBase: '/web-api', headers: {} }, fetchImpl: async () => reply(401, ''), onUnauthorized });
-    await expect(api.status()).rejects.toMatchObject({ status: 401 });
+    const api = createApi({ fetchImpl: async () => answers.shift(), onGateway, onUnauthorized });
+    await expect(api.status()).rejects.toMatchObject({ status: 401, code: 'gateway_sign_in' });
+    await expect(api.status()).rejects.toMatchObject({ status: 401, code: '' });
+    expect(onGateway).toHaveBeenCalledTimes(2);
+    await expect(api.status()).rejects.toMatchObject({ code: 'no_session' });
+    await expect(api.signIn({ username: 'a', password: 'b' })).rejects.toMatchObject({ code: 'wrong_credentials' });
+    expect(onGateway).toHaveBeenCalledTimes(2);
     expect(onUnauthorized).toHaveBeenCalledOnce();
   });
 
