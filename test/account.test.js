@@ -26,6 +26,16 @@ describe('sign-in messages', () => {
     expect(signInMessage(refusal(404, 'not_found'))).toMatch(/turned off on this hub/);
   });
 
+  it('say what to do when refused for where the browser is, not where the hub places it', () => {
+    const messages = ['outside_not_allowed', 'insecure_transport', 'password_inside_only'].map((code) =>
+      signInMessage(refusal(403, code, 'Access from outside the internal network is not allowed')),
+    );
+    expect(messages[0]).toBe('Sign-in was refused. Ask an administrator if you need access.');
+    expect(messages[1]).toMatch(/https:\/\//);
+    expect(messages[2]).toMatch(/organisation's account/);
+    for (const m of messages) expect(m).not.toMatch(/outside|inside|internal/i);
+  });
+
   it("pass on the hub's wait, which says how long", () => {
     expect(signInMessage(refusal(429, 'too_many_attempts', 'Too many wrong attempts; try again in 600 seconds'))).toBe(
       'Too many wrong attempts; try again in 600 seconds',

@@ -10,30 +10,9 @@ export const REFUSALS = new Set(['outside_not_allowed', 'insecure_transport']);
  */
 export const PASSWORD_INSIDE_ONLY = 'password_inside_only';
 
-export function isRefusal(code) {
-  return REFUSALS.has(code);
-}
-
 /** A refusal that ends the sign-in this page has: either of the above. */
 export function endsSignIn(code) {
   return REFUSALS.has(code) || code === PASSWORD_INSIDE_ONLY;
-}
-
-/**
- * What the page says instead of the sign-in form. `access` is what GET /session said about the ways in:
- * `{ refusal }`. It tells a visitor what to do, not where the hub places them or the address it sees.
- */
-export function refusalText(access) {
-  if (access?.refusal === 'insecure_transport') {
-    return {
-      title: 'This hub needs HTTPS from here',
-      detail: 'Open it with its https:// address.',
-    };
-  }
-  return {
-    title: 'This hub cannot be used from here',
-    detail: "Open the dashboard from your organisation's network, for example over the VPN, or ask an administrator.",
-  };
 }
 
 /** The lines of Settings > Access, from GET /access. */

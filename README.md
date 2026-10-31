@@ -71,7 +71,7 @@ The hub's settings are in its [reference](https://github.com/primelogiclabio/ser
 ```text
 src/lib/         api client, formatting, routing, auth/status/theme state, config.json reader
 src/components/  status badge, charts, check table, forms, dialogs
-src/views/       dashboard, server, monitors, add server, settings, sign-in, password change, refusal
+src/views/       dashboard, server, monitors, add server, settings, sign-in, password change
 public/          config.json (copied into dist/ as is)
 scripts/         demo data seeder
 test/            unit tests
