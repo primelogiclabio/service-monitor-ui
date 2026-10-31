@@ -10,8 +10,9 @@
   let error = $state('');
 
   // The identity provider's button, on a hub that has one; the password form unless the hub takes only the provider
-  // from here (outside the internal network). An older hub says nothing, and then the form is all there is.
-  const provider = $derived(auth.access?.provider?.allowed ? auth.access.provider : null);
+  // here. An older hub says nothing, and then the form is all there is. A sign-in refused for where the browser is
+  // shows as a message when someone tries, as a wrong password does.
+  const provider = $derived(auth.access?.provider ?? null);
   const passwordForm = $derived(auth.access?.passwordSignIn !== false);
 
   async function submit(e) {
@@ -70,9 +71,7 @@
         <button class={provider ? 'btn' : 'btn primary'} type="submit" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
       </form>
     {:else if !provider}
-      <p class="form-error" role="alert">This hub takes no sign-in from here.</p>
-    {:else}
-      <p class="hint">From outside the hub's internal network, only this sign-in works.</p>
+      <p class="form-error" role="alert">This hub offers no sign-in. Ask an administrator.</p>
     {/if}
 
     <div class="row between small muted">

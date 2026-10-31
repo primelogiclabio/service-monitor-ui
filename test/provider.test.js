@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { providerHealth, providerRows } from '../src/lib/provider.js';
-import { providerSignInMessage, userAction, userSignIn, webAddress } from '../src/lib/account.js';
-import { endsSignIn, isRefusal } from '../src/lib/access.js';
+import { providerSignInMessage, signInMessage, userAction, userSignIn, webAddress } from '../src/lib/account.js';
+import { endsSignIn } from '../src/lib/access.js';
 
 const VIEW = {
   configured: true,
@@ -85,6 +85,12 @@ describe('signing in with the provider, in words', () => {
     expect(providerSignInMessage('<script>')).toBe('Signing in with the identity provider did not work.');
   });
 
+  it('a refusal for where the browser is reads like the same refusal of a password', () => {
+    for (const code of ['outside_not_allowed', 'insecure_transport']) {
+      expect(providerSignInMessage(code), code).toBe(signInMessage({ code }));
+    }
+  });
+
   it('follows only web addresses', () => {
     expect(webAddress('https://auth.example/logout?x=1')).toBe('https://auth.example/logout?x=1');
     expect(webAddress('http://127.0.0.1:8080/api/v1/oidc/start')).toBe('http://127.0.0.1:8080/api/v1/oidc/start');
@@ -99,9 +105,8 @@ describe('signing in with the provider, in words', () => {
     expect(userAction('enable', { username: 'bob' }).message).toMatch(/their password/);
   });
 
-  it('a password refused outside ends this sign-in but is not a refusal of the browser', () => {
+  it('a password refused outside ends this sign-in', () => {
     expect(endsSignIn('password_inside_only')).toBe(true);
-    expect(isRefusal('password_inside_only')).toBe(false);
     expect(endsSignIn('outside_not_allowed')).toBe(true);
     expect(endsSignIn('forbidden')).toBe(false);
   });

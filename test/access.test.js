@@ -1,31 +1,23 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { describeAccess, isRefusal, refusalText } from '../src/lib/access.js';
+import { describeAccess, endsSignIn } from '../src/lib/access.js';
 
 describe('a refusal for where the browser is', () => {
-  it('is known by the hub codes for it and no others', () => {
-    expect(isRefusal('outside_not_allowed')).toBe(true);
-    expect(isRefusal('insecure_transport')).toBe(true);
+  it('ends the sign-in this page has, for the hub codes for it and no others', () => {
+    for (const code of ['outside_not_allowed', 'insecure_transport', 'password_inside_only']) {
+      expect(endsSignIn(code), code).toBe(true);
+    }
     for (const other of ['forbidden', 'password_change_required', 'initial_password_inside_only', '', undefined]) {
-      expect(isRefusal(other)).toBe(false);
+      expect(endsSignIn(other)).toBe(false);
     }
   });
 
-  it('says that access from outside is not allowed, and where the hub sees the browser', () => {
-    const text = refusalText({ network: 'outside', address: '203.0.113.7', refusal: 'outside_not_allowed' });
-    expect(text.title).toBe('Access from outside the internal network is not allowed');
-    expect(text.where).toBe('This hub sees this browser at 203.0.113.7, outside its internal network.');
-  });
-
-  it('asks for HTTPS when that is all that is missing', () => {
-    const text = refusalText({ network: 'outside', address: '203.0.113.7', refusal: 'insecure_transport' });
-    expect(text.title).toMatch(/HTTPS only/);
-    expect(text.detail).toMatch(/https:\/\//);
-  });
-
-  it('still reads well when the hub did not say the address', () => {
-    expect(refusalText({ refusal: 'outside_not_allowed' }).where).toBe('');
-    expect(refusalText(null).title).toMatch(/not allowed/);
+  it('has no screen of its own: the sign-in page says it, and never where the hub places the browser', () => {
+    const app = readFileSync(new URL('../src/App.svelte', import.meta.url), 'utf8');
+    expect(app).not.toMatch(/refused|Refused/);
+    const login = readFileSync(new URL('../src/views/Login.svelte', import.meta.url), 'utf8');
+    const markup = login.slice(login.indexOf('</script>'));
+    expect(markup).not.toMatch(/outside|inside|internal network|refus/i);
   });
 });
 
@@ -61,10 +53,8 @@ describe('Settings > Access', () => {
     expect(describeAccess(null)).toBeNull();
   });
 
-  it('is a section every signed-in user sees, and the refusal a screen of its own', () => {
+  it('is a section every signed-in user sees', () => {
     const settings = readFileSync(new URL('../src/views/Settings.svelte', import.meta.url), 'utf8');
     expect(settings).toContain('<AccessSettings />');
-    const app = readFileSync(new URL('../src/App.svelte', import.meta.url), 'utf8');
-    expect(app).toMatch(/view === 'refused'[\s\S]*<Refused \/>/);
   });
 });

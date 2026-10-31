@@ -1,5 +1,5 @@
-import { PASSWORD_INSIDE_ONLY, isRefusal } from './access.js';
-import { providerSignInMessage, signInMessage, webAddress } from './account.js';
+import { PASSWORD_INSIDE_ONLY } from './access.js';
+import { providerSignInMessage, webAddress } from './account.js';
 import { ApiError, createApi } from './api.js';
 import { loadConfig } from './config.js';
 
@@ -18,11 +18,12 @@ export const GATEWAY_STUCK =
  * `signedIn` means the dashboard may be used; a user whose password must be changed first has `mustChangePassword`
  * instead, and can do only that. `role` is 'ADMIN' or 'READ' and `admin` says which.
  *
- * `access` is how the hub sees this browser, from GET /session: `{ network, address, signInAllowed, refusal,
- * passwordSignIn, provider }`, where `refusal` is the hub's code ('outside_not_allowed' or 'insecure_transport') when
- * it does not let people in from here, `passwordSignIn` says whether the password form may be used from here, and
- * `provider` is the identity provider's sign-in (`{ label, allowed, startUrl }`) on a hub that has one, else null.
- * It is null when the hub did not say (an older hub). `viaProvider` is true for a user who signs in with the
+ * `access` is what the sign-in page shows, from GET /session: `{ passwordSignIn, provider }`, where `passwordSignIn`
+ * says whether it has the password form and `provider` is the identity provider's button (`{ label, startUrl }`) on a
+ * hub that has one, else null. Like any sign-in page it does not know beforehand whether a sign-in will be refused for
+ * where the browser is; trying tells, and the page says so as it says a wrong password. It never holds whether the
+ * hub counts the browser as inside or outside, nor the address it sees (Settings > Access shows those to people
+ * signed in). `viaProvider` is true for a user who signs in with the
  * identity provider and so has no password on the hub.
  *
  * A gateway in front of the hub (Keycloak through nginx, say) is only a gate: it lets the page through, and then the
@@ -45,13 +46,12 @@ const SIGNIN_ERROR = 'signin_error';
 
 let api = null;
 
-/** Which screen the page shows: 'loading', 'refused' (the hub does not let people in from where this browser is),
- * 'login', 'change-password' or 'app'. */
+/** Which screen the page shows: 'loading', 'login', 'change-password' or 'app'. */
 export function screen(ready) {
   if (!ready) return 'loading';
   if (auth.signedIn) return 'app';
   if (auth.mustChangePassword) return 'change-password';
-  return auth.access?.refusal ? 'refused' : 'login';
+  return 'login';
 }
 
 /** The API client for the current session, or null when signed out. */
@@ -105,19 +105,14 @@ export function reloadForGateway() {
   return true;
 }
 
-/** What GET or POST /session said about this browser's network, or null when the hub did not say. */
+/** What GET or POST /session said the sign-in page shows. */
 function accessFrom(state) {
-  if (!state?.network) return null;
-  const p = state.provider;
+  const p = state?.provider;
   const startUrl = webAddress(p?.startUrl);
   return {
-    network: state.network,
-    address: state.address ?? '',
-    signInAllowed: state.signInAllowed !== false,
-    refusal: state.signInRefusal ?? '',
     // An older hub does not say, and has no other way in than the password.
-    passwordSignIn: state.passwordSignIn !== false,
-    provider: p && startUrl ? { label: p.label || 'Sign in with single sign-on', allowed: p.allowed !== false, startUrl } : null,
+    passwordSignIn: state?.passwordSignIn !== false,
+    provider: p && startUrl ? { label: p.label || 'Sign in with single sign-on', startUrl } : null,
   };
 }
 
@@ -141,27 +136,18 @@ function takeSignInError() {
   return providerSignInMessage(code);
 }
 
-function markRefused(code) {
-  auth.access = { ...(auth.access ?? { network: 'outside', address: '' }), signInAllowed: false, refusal: code };
-}
-
 /**
- * The hub refused a request because of where this browser is (it left the internal network, say). Nothing else will
- * work from here, so show the refusal instead of a dashboard full of errors, and ask the hub for the current address.
+ * The hub refused a request because of where this browser is (it left the internal network, say): this sign-in will
+ * not work from here. Back to the sign-in page, as when a sign-in ends, with what the hub offers from here now.
  */
 function refuse(code) {
-  if (code === PASSWORD_INSIDE_ONLY) {
-    // A password sign-in that the hub no longer takes from here: the identity provider's still works.
-    signOut(signInMessage({ code }));
-    if (auth.access) auth.access = { ...auth.access, passwordSignIn: false };
-  } else {
-    signOut();
-    markRefused(code);
-  }
+  signOut(SESSION_ENDED);
+  // A password sign-in that the hub no longer takes from here: the identity provider's button is the way in.
+  if (code === PASSWORD_INSIDE_ONLY && auth.access) auth.access = { ...auth.access, passwordSignIn: false };
   sessionClient()
     .session()
     .then((state) => {
-      if (!auth.signedIn && accessFrom(state)) auth.access = accessFrom(state);
+      if (!auth.signedIn) auth.access = accessFrom(state);
     })
     .catch(() => {});
 }
@@ -179,7 +165,7 @@ async function adopt(client, state) {
   auth.admin = auth.role === 'ADMIN';
   auth.mustChangePassword = must;
   auth.signedIn = !must;
-  if (state.network) auth.access = accessFrom(state);
+  if (state.passwordSignIn !== undefined) auth.access = accessFrom(state);
   auth.hub = hub;
   auth.error = '';
 }
@@ -191,8 +177,6 @@ export async function signIn({ username, password }) {
   try {
     state = await client.signIn({ username: username.trim(), password });
   } catch (e) {
-    // The browser is somewhere the hub does not let people in from: show that, not a form that cannot work.
-    if (e.status === 403 && isRefusal(e.code)) markRefused(e.code);
     // From here only the identity provider's sign-in works: hide the form, keep its button.
     if (e.status === 403 && e.code === PASSWORD_INSIDE_ONLY && auth.access) {
       auth.access = { ...auth.access, passwordSignIn: false };

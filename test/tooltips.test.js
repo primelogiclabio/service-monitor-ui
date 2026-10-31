@@ -83,7 +83,7 @@ describe('help panel state', () => {
   });
 
   it('gives every screen a Help button', () => {
-    const views = readdirSync('src/views').filter((f) => !['Login.svelte', 'ChangePassword.svelte', 'Refused.svelte', 'Help.svelte'].includes(f));
+    const views = readdirSync('src/views').filter((f) => !['Login.svelte', 'ChangePassword.svelte', 'Help.svelte'].includes(f));
     for (const view of views) {
       const text = readFileSync(join('src/views', view), 'utf8');
       expect(text, view).toMatch(/<WithHelp\b/);

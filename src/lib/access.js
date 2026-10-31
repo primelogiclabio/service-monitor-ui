@@ -10,33 +10,9 @@ export const REFUSALS = new Set(['outside_not_allowed', 'insecure_transport']);
  */
 export const PASSWORD_INSIDE_ONLY = 'password_inside_only';
 
-export function isRefusal(code) {
-  return REFUSALS.has(code);
-}
-
 /** A refusal that ends the sign-in this page has: either of the above. */
 export function endsSignIn(code) {
   return REFUSALS.has(code) || code === PASSWORD_INSIDE_ONLY;
-}
-
-/**
- * What the page says instead of the sign-in form. `access` is what GET /session said about this browser:
- * `{ network, address, refusal }`.
- */
-export function refusalText(access) {
-  const where = access?.address ? `This hub sees this browser at ${access.address}, outside its internal network.` : '';
-  if (access?.refusal === 'insecure_transport') {
-    return {
-      title: 'This hub works over HTTPS only from outside the internal network',
-      detail: 'Open it with its https:// address, or from inside the network.',
-      where,
-    };
-  }
-  return {
-    title: 'Access from outside the internal network is not allowed',
-    detail: 'Open the dashboard from inside the network, for example over the VPN, or ask an administrator.',
-    where,
-  };
 }
 
 /** The lines of Settings > Access, from GET /access. */

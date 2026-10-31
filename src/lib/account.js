@@ -17,6 +17,11 @@ export function roleLabel(role) {
   return ROLES.find((r) => r.value === role)?.label ?? role;
 }
 
+// A sign-in refused for where the browser is reads like any other failed sign-in: it says what to do, not where the
+// hub places the browser.
+const REFUSED = 'Sign-in was refused. Ask an administrator if you need access.';
+const HTTPS_ONLY = 'Sign in over a secure connection: open this page with its https:// address.';
+
 /** What to say when signing in failed. */
 export function signInMessage(err) {
   switch (err?.code) {
@@ -31,7 +36,11 @@ export function signInMessage(err) {
     case 'cross_site':
       return "The hub refused the request because it did not come from the hub's own page. Open the dashboard at the hub's address.";
     case 'password_inside_only':
-      return 'From outside the internal network, sign in with the identity provider.';
+      return "Sign in with your organisation's account instead.";
+    case 'outside_not_allowed':
+      return REFUSED;
+    case 'insecure_transport':
+      return HTTPS_ONLY;
     default:
       return err?.message || 'Signing in failed.';
   }
@@ -56,13 +65,13 @@ export function providerSignInMessage(code) {
     case 'provider_refused':
       return 'The identity provider did not sign you in. Try again, or ask an administrator.';
     case 'provider_unavailable':
-      return 'The identity provider could not be reached. Try again later, or sign in with a password from the internal network.';
+      return 'The identity provider could not be reached. Try again later, or ask an administrator.';
     case 'invalid_response':
       return "The identity provider's answer failed the hub's checks, so you were not signed in. Ask an administrator to look at the hub's log.";
     case 'outside_not_allowed':
-      return 'Signing in from outside the internal network is not allowed.';
+      return REFUSED;
     case 'insecure_transport':
-      return 'From outside the internal network the hub works over HTTPS only.';
+      return HTTPS_ONLY;
     case 'not_configured':
       return 'This hub has no identity provider.';
     default:

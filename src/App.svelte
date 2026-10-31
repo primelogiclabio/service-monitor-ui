@@ -8,7 +8,6 @@
   import { ago } from './lib/format.js';
   import Login from './views/Login.svelte';
   import ChangePassword from './views/ChangePassword.svelte';
-  import Refused from './views/Refused.svelte';
   import Overview from './views/Overview.svelte';
   import Server from './views/Server.svelte';
   import Checks from './views/Checks.svelte';
@@ -54,8 +53,6 @@
 
 {#if view === 'loading'}
   <div class="login"><p class="muted">Loading…</p></div>
-{:else if view === 'refused'}
-  <Refused />
 {:else if view === 'login'}
   <Login />
 {:else if view === 'change-password'}
