@@ -7,6 +7,7 @@
   import CheckTable from '../components/CheckTable.svelte';
   import CheckForm from '../components/CheckForm.svelte';
   import Modal from '../components/Modal.svelte';
+  import WithHelp from '../components/WithHelp.svelte';
 
   let range = $state('6h');
   let query = $state('');
@@ -37,12 +38,17 @@
   }
 </script>
 
+<WithHelp topic="monitors" placed>
+{#snippet children(help)}
 <div class="stack-lg">
   <div class="row between">
     <h1 style="font-size: 1.75rem">Monitors</h1>
-    {#if auth.admin}
-      <button class="btn primary" type="button" onclick={() => { formError = ''; adding = true; }}>Add check</button>
-    {/if}
+    <div class="row">
+      {@render help()}
+      {#if auth.admin}
+        <button class="btn primary" type="button" onclick={() => { formError = ''; adding = true; }}>Add check</button>
+      {/if}
+    </div>
   </div>
 
   <section class="filters" aria-label="Filters">
@@ -90,6 +96,8 @@
     {/if}
   </section>
 </div>
+{/snippet}
+</WithHelp>
 
 {#if adding}
   <Modal title="Add a check" onclose={() => (adding = false)}>

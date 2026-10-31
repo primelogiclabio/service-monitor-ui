@@ -9,6 +9,7 @@
   import ConfirmDialog from '../components/ConfirmDialog.svelte';
   import Modal from '../components/Modal.svelte';
   import Tip from '../components/Tip.svelte';
+  import WithHelp from '../components/WithHelp.svelte';
 
   let { id } = $props();
 
@@ -92,6 +93,7 @@
     <p style="margin-top: 12px"><a href="#/">Back to the dashboard</a></p>
   </div>
 {:else}
+  <WithHelp topic="server">
   <div class="stack-lg">
     <div class="stack">
       <a class="btn back" href="#/">← Dashboard</a>
@@ -142,13 +144,17 @@
       {#if server.checks.length === 0}
         <div class="empty">
           <h2>Nothing is monitored on this server yet</h2>
-          <p>Only the checks an admin adds are run. Use <code>svcmon agent services</code> on the server to list what exists.</p>
+          <p>
+            Only the checks someone adds are run, here or in the server's own <code>checks.json</code>. On the server,
+            <code>svcmon agent services</code> and <code>svcmon agent containers</code> list what exists.
+          </p>
         </div>
       {:else}
         <CheckTable checks={server.checks} {range} onchanged={refresh} />
       {/if}
     </section>
   </div>
+  </WithHelp>
 
   {#if adding}
     <Modal title="Add a check to {server.name}" onclose={() => (adding = false)}>

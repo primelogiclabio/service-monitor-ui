@@ -5,10 +5,11 @@
   /**
    * Puts a help topic in a panel on the right of its content. A Help button at the top right opens it and its own
    * close button, also on the right, shuts it again; the choice is remembered per topic. With `bar` the button gets
-   * a row of its own (for dialogs, where a floating button would cover the first field). On a narrow screen the
-   * panel stacks above the content instead.
+   * a row of its own (for dialogs, where a floating button would cover the first field). With `placed` the page puts
+   * the button beside its own buttons instead: it declares `{#snippet children(help)}` and renders `help()` there.
+   * On a narrow screen the panel stacks above the content instead.
    */
-  let { topic, bar = false, children } = $props();
+  let { topic, bar = false, placed = false, children } = $props();
 
   const title = $derived(HELP[topic]?.title ?? 'Help');
   const panelId = `help-panel-${topic}`;
@@ -29,7 +30,7 @@
   }
 </script>
 
-<div class="with-help" class:open class:bar>
+{#snippet button()}
   {#if !open}
     <button class="btn small help-toggle" type="button" aria-expanded="false" aria-controls={panelId} onclick={toggle}>
       <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false">
@@ -40,7 +41,11 @@
       Help
     </button>
   {/if}
-  <div class="with-help-main">{@render children?.()}</div>
+{/snippet}
+
+<div class="with-help" class:open class:bar>
+  {#if !placed}{@render button()}{/if}
+  <div class="with-help-main">{@render children?.(button)}</div>
   {#if open}
     <aside id={panelId} class="help-panel" aria-label="Help: {title.toLowerCase()}">
       <div class="help-panel-head">

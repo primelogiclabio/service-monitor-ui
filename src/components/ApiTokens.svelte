@@ -43,8 +43,9 @@
   <div>
     <h2 id="api-h">API tokens</h2>
     <p class="secondary">
-      Tokens let the <code>svcmon</code> CLI and scripts use the hub; people sign in with their own account instead. Make one
-      with <code>svcmon token create</code>. Only a hash is stored, so a lost token cannot be shown again: revoke it and make a
+      Tokens are for programs, not people: the <code>svcmon</code> command line (the same program as the agent, used from a
+      terminal) and your own scripts. People sign in with their own account instead. Make one with
+      <code>svcmon token create</code>. Only a hash is stored, so a lost token cannot be shown again: revoke it and make a
       new one.
     </p>
   </div>

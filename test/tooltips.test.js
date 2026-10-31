@@ -78,8 +78,22 @@ describe('help panel state', () => {
 
   it('has a topic for every panel the pages open', () => {
     const topics = sources.flatMap(({ text }) => [...text.matchAll(/<WithHelp\b[^>]*\btopic="([^"]+)"/g)].map((m) => m[1]));
-    expect(topics.sort()).toEqual(['addCheck', 'addServer']);
+    expect(topics.sort()).toEqual(['addCheck', 'addServer', 'dashboard', 'monitors', 'server']);
     for (const t of topics) expect(HELP).toHaveProperty(t);
+  });
+
+  it('gives every screen a Help button', () => {
+    const views = readdirSync('src/views').filter((f) => !['Login.svelte', 'ChangePassword.svelte', 'Refused.svelte', 'Help.svelte'].includes(f));
+    for (const view of views) {
+      const text = readFileSync(join('src/views', view), 'utf8');
+      expect(text, view).toMatch(/<WithHelp\b/);
+    }
+  });
+
+  it('lets a page place the button itself, and renders it there', () => {
+    for (const { file, text } of sources.filter(({ text }) => /<WithHelp\b[^>]*\bplaced\b/.test(text))) {
+      expect(text, file).toMatch(/\{#snippet children\((\w+)\)\}[\s\S]*\{@render \1\(\)\}/);
+    }
   });
 });
 

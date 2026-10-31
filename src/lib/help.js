@@ -6,13 +6,67 @@
  * @type {Record<string, Topic>}
  */
 export const HELP = {
+  dashboard: {
+    title: 'The dashboard',
+    summary:
+      'How everything is doing at a glance. The headline gives the worst status anywhere, the tiles count servers and checks, and every server has a card under its cluster. Select a card to open the server.',
+    fields: [
+      { name: 'Up', text: 'The latest result is fine.' },
+      { name: 'Warning', text: 'Over its warning threshold, a certificate about to expire, or a container that is starting or keeps restarting.' },
+      { name: 'Down', text: 'Failed as many times in a row as the check allows (its "Failures before down").' },
+      { name: 'Unknown', text: 'No result yet, or the check could not tell, for example when the agent may not read what it should test.' },
+      { name: 'Disabled', text: 'Switched off: it keeps its history but does not run and does not count.' },
+      { name: 'Offline', text: 'The server\'s agent has not reported for 90 seconds (the hub\'s `agent-stale-seconds`), so its checks are out of date.' },
+    ],
+    notes: [
+      'A server shows the worst of its enabled checks, and Down when its agent is offline; a cluster shows its worst server.',
+      'Cluster, Search and Problems only narrow the cards. A card lists the checks that are not up, or says how many pass.',
+      '"Checks run by the hub" are checks that belong to no server, such as a website the hub tests from its own network.',
+      'The page asks the hub for news every 5 seconds; the bottom of the page says when it last did. Live shows changes as they happen.',
+      'Administrators see Add server, which registers a new server (see Adding a server).',
+    ],
+  },
+  server: {
+    title: 'A server\'s page',
+    summary:
+      'One server and its checks: its cluster, operating system, agent version, and when its agent last reported. Select a check\'s name to see its history and its buttons (see Monitors).',
+    fields: [
+      { name: 'Add check', text: 'A check for this server, with the server already chosen (see Adding a check).' },
+      { name: 'Rename or move', text: 'Changes the name the hub shows and the cluster the server is grouped under. The agent and its checks carry on as before.' },
+      { name: 'Remove', text: 'Deletes the server with its checks and history, and revokes its agent\'s credential. The agent stays installed on the machine until you uninstall it there with `svcmon agent uninstall`.' },
+      { name: 'Time range for charts', text: 'How far back every chart on the page goes, from 1 hour to 7 days.' },
+    ],
+    notes: [
+      'A red banner means the agent has gone quiet: check that the `svcmon-agent` service is running on the server and can reach the hub.',
+      'Only the checks someone adds are run. On the server, `svcmon agent services` and `svcmon agent containers` list what could be checked.',
+      'Read-only users see the same page without the buttons.',
+    ],
+  },
+  monitors: {
+    title: 'Monitors',
+    summary:
+      'Every check on the hub in one table, from every server and the hub itself. Narrow it down, then select a check\'s name to see its history and its buttons.',
+    fields: [
+      { name: 'Search, Cluster, Type, Show', text: 'Narrow the table. Show "Problems only" for checks that are not up, or "Disabled" for checks that are switched off.' },
+      { name: 'Chart range', text: 'How far back the history of an opened check goes, from 1 hour to 7 days. CPU, memory and disk are drawn as percent used against their thresholds, HTTP, TCP and ping as response time, and service and container checks as a strip of results.' },
+      { name: 'Reading', text: 'The latest measurement: response time, or percent used for CPU, memory and disk.' },
+      { name: 'Agent file', text: 'The check comes from the server\'s own `checks.json`, so it is changed there (or with `svcmon agent check` on that server). Here you can view its settings and switch it off or on; to delete it, take it out of the file first. "Removed from agent file" means it was: it stays off, and Delete clears its history.' },
+      { name: 'Run now', text: 'Runs a check that the hub runs straight away and records the result. Checks on an agent run on their own schedule.' },
+      { name: 'Disable, Enable', text: 'Stops or restarts a check. Its history is kept, and it does not count while it is off.' },
+      { name: 'Edit, Delete', text: 'Change the check\'s settings, or remove it with its history.' },
+    ],
+    notes: [
+      'The hub keeps each result for 30 days (its `retention-days` setting).',
+      'Administrators see Add check (see Adding a check) and the buttons; read-only users can look at everything.',
+    ],
+  },
   addServer: {
     title: 'Adding a server',
     summary:
       'Servers add themselves. Run one command on the server, with the small `svcmon` agent, and it registers with this hub on its own. The command is made for you here, with this hub\'s address and a join key already in it. The agent only connects out, so the server needs no open ports.',
     steps: [
       'Choose what the server needs: a new agent installed, or an agent that is already installed enrolled with this hub. The command is ready to copy, with the hub address and a join key filled in. Add a cluster if you want the server grouped (optional).',
-      'A new agent: copy the `svcmon` program to the server (one file; build it as described in the README, "Build the agent and CLI") and run the install command from its folder, in an elevated PowerShell on Windows or with `sudo` on Linux or macOS. It registers the server under its host name and starts the agent as a service.',
+      'A new agent: copy the `svcmon` program to the server (one file: the release file `svcmon-agent-<version>-<system>-<cpu>` for its system, renamed to `svcmon`, or one you built) and run the install command from its folder, in an elevated PowerShell on Windows or with `sudo` on Linux or macOS. It registers the server under its host name and starts the agent as a service.',
       'An agent that is already installed (registered with another hub, or removed from this one): run the enroll command, then restart the agent service; both lines are given for each system. It keeps its program and service and only changes which hub it reports to.',
       'The server shows up on the Dashboard within seconds. Nothing is monitored until you add checks: open the server and choose Add check.',
     ],
@@ -48,18 +102,150 @@ export const HELP = {
     ],
     notes: [
       'A server is shown offline when its agent has not reported for 90 seconds (the hub\'s `agent-stale-seconds`).',
-      'To test a check straight away, use Run on its row (hub checks).',
+      'To test a check that the hub runs straight away, open it and choose Run now.',
     ],
+  },
+  account: {
+    title: 'Your account',
+    summary: 'Your password, and the browsers where you are signed in.',
+    fields: [
+      { name: 'Change your password', text: 'From 12 to 128 characters and not your user name. Changing it signs you out everywhere else.' },
+      { name: 'Where you are signed in', text: 'Every browser signed in as you, with its address and when it was last used. End signs one out: use it for a browser you no longer use or do not recognise.' },
+    ],
+    notes: [
+      'A sign-in ends after 60 minutes without use, and after 12 hours at most (the hub\'s `svcmon.sessions` settings). The dashboard refreshing itself does not count as use.',
+      'Forgot your password? An administrator can give you a new temporary one under Users. If no administrator can sign in, someone on the hub\'s machine runs `java -jar svcmon-hub.jar users reset <name>`.',
+    ],
+  },
+  users: {
+    title: 'Users',
+    summary: 'The people who may sign in to this dashboard, and what each may do. Only administrators see this page.',
+    steps: [
+      'Type a user name, choose a role and press Add user.',
+      'The hub makes a temporary password and shows it once. Copy it and pass it on safely.',
+      'The person signs in with it from the hub\'s internal network and chooses their own password straight away.',
+    ],
+    fields: [
+      { name: 'Read only', text: 'Can look at the dashboard, servers, checks and Settings, Access, and change only their own password.' },
+      { name: 'Administrator', text: 'Can also add and change servers and checks, manage users, and revoke tokens and agent credentials.' },
+      { name: 'Status', text: 'Active; Must change password (still on a temporary one); or Disabled.' },
+      { name: 'Reset password', text: 'Gives the user a new temporary password, shown once, and signs them out everywhere.' },
+      { name: 'Disable, Enable', text: 'Disable signs the user out and stops them signing in, but keeps the account; Enable lets them back in.' },
+      { name: 'Delete', text: 'Removes the account. What they did stays under Activity.' },
+    ],
+    notes: [
+      'Changing someone\'s role signs them out, so the new role applies at once.',
+      'Your own account is changed under Account, not here, and the hub always keeps at least one administrator.',
+      'Agents, the `svcmon` command line and scripts do not use these accounts; they use tokens.',
+    ],
+  },
+  agents: {
+    title: 'Agent credentials',
+    summary:
+      'Every server\'s agent signs in to the hub with its own credential, made when it registered and kept in `agent.json` on that server. This page lists them, with when each server last reported. Only administrators see it.',
+    fields: [
+      { name: 'Revoke', text: 'Stops that agent reporting. The server stays, with its checks and history, but shows offline. To bring it back, remove the server on its page and enroll its agent again.' },
+      { name: 'One-time tokens not used yet', text: 'Made under "Other ways" on the Add server page. Each can register one server until it expires; revoke one that is no longer needed.' },
+    ],
+    notes: [
+      'Revoke a credential when the server, or its `agent.json`, may be in the wrong hands.',
+      'Join keys, which register any number of servers, are kept on the Add server page.',
+    ],
+  },
+  apiTokens: {
+    title: 'API tokens',
+    summary:
+      'Tokens are for programs, not people: the `svcmon` command line and your own scripts use one to call the hub. People sign in with their own account instead. Only administrators see this page.',
+    steps: [
+      'On a computer that already has an admin token, run `svcmon token create --name "ops laptop" --scope read` (or `--scope admin`). It prints the new token once.',
+      'Where the token will be used, run `svcmon login --hub <hub address> --token <token>`, which saves it for the `svcmon` commands; a script sends it as `Authorization: Bearer <token>`.',
+    ],
+    fields: [
+      { name: 'Access', text: 'Read can look; Admin can also make changes.' },
+      { name: 'Revoke', text: 'Anything using the token stops working at once. Only a hash is stored, so a lost token cannot be shown again: revoke it and make a new one.' },
+      { name: 'The hub\'s own', text: '`bootstrap` and `initial-admin` are admin tokens the hub made when it was set up, `recovery-admin` one it made when started with `--svcmon.new-admin-token=true`. Revoke one that nothing uses any more.' },
+    ],
+    notes: [
+      'A token works only from the hub\'s internal network (see Access).',
+      'No admin token at hand? Start the hub once with `--svcmon.new-admin-token=true`: it prints a new one, once, in its console or service log.',
+      '`svcmon` is one program with two jobs: the agent on a monitored server, and the command line anywhere (see The svcmon program).',
+    ],
+  },
+  activity: {
+    title: 'Activity',
+    summary: 'The hub\'s record of who signed in and who changed what, newest first. Only administrators see it.',
+    fields: [
+      { name: 'Show', text: 'Everything; Sign-ins (signing in and out, refusals, password changes); or Changes (every add, change and delete).' },
+      { name: 'Who, From', text: 'The user or token, and the address the request came from.' },
+      { name: 'What, Outcome', text: 'What was done, and whether it worked or was refused. Hover over What to see the call the hub received.' },
+    ],
+    notes: [
+      'Sign-ins are kept for 30 days and changes for a year, unless the hub\'s `svcmon.audit` settings say otherwise.',
+      'It never holds a password, a token or what was sent. A user name nobody has is shown as unknown, because it may be a password typed in the wrong box.',
+      'Agents reporting are not listed; only their registration is.',
+    ],
+  },
+  access: {
+    title: 'Access',
+    summary:
+      'Where this hub may be used from. Inside its internal network it always may. From outside, only people signed in over HTTPS, and only when the hub allows it.',
+    fields: [
+      { name: 'Internal network', text: 'The addresses that count as inside.' },
+      { name: 'Public proxies', text: 'A proxy that people outside come through. A request from it counts as outside, so a proxy that forgets to pass on the visitor\'s address is refused rather than let in.' },
+      { name: 'The banner', text: 'Whether this browser counts as inside or outside right now.' },
+    ],
+    notes: [
+      'It is set in the hub\'s `application.yml` under `svcmon.access`, not here, and applies when the hub restarts.',
+      'From outside, API tokens and first or temporary passwords never work.',
+      'Agents are never refused for where they are.',
+      'To check it, open this page from a phone on mobile data: it should say outside.',
+    ],
+  },
+  svcmon: {
+    title: 'The svcmon program',
+    summary:
+      '`svcmon` is one small program with two jobs. On a monitored server it runs as the agent; on any computer its other commands use the hub from a terminal, like this dashboard does.',
+    fields: [
+      { name: 'Agent commands', text: '`svcmon agent ...`, run on the server itself: `install`, `enroll`, `uninstall`, `services`, `containers`, and `check add|rm|list` for the server\'s own `checks.json`. The agent uses its own credential from `agent.json`.' },
+      { name: 'Hub commands', text: '`svcmon status`, `svcmon check ...`, `svcmon alert ...`, `svcmon token ...` and more, from any computer that can reach the hub. They need an API token, saved once with `svcmon login`.' },
+      { name: 'Alerts', text: 'Where the hub sends status changes (email, Slack, Discord or a webhook) is set up with `svcmon alert add`; `svcmon alert test` sends a test message. The dashboard has no alerts page yet.' },
+    ],
+    notes: ['`svcmon help` lists every command.'],
+  },
+  live: {
+    title: 'Live view',
+    summary:
+      'The page normally asks the hub for the status every 5 seconds. Switch Live on (top right) and the hub pushes changes as they happen instead. It switches itself off after 5 minutes without activity, and falls back to normal refreshing if the connection cannot be kept.',
+  },
+  icons: {
+    title: 'Info icons',
+    summary:
+      'The small i beside a field explains it. Hover over it, focus it with the keyboard, or click or tap it to keep the note open; press Escape or click elsewhere to close it.',
   },
 };
 
 /** The sections of the Help page, in page order: the jump menu lists them and each `id` is the section's element id. */
 export const HELP_SECTIONS = [
-  { key: 'addServer', id: 'adding-a-server', label: HELP.addServer.title },
-  { key: 'addCheck', id: 'adding-a-check', label: HELP.addCheck.title },
-  { key: 'live', id: 'live-view', label: 'Live view' },
-  { key: 'icons', id: 'info-icons', label: 'Info icons' },
-];
+  'dashboard',
+  'server',
+  'monitors',
+  'addServer',
+  'addCheck',
+  'account',
+  'users',
+  'agents',
+  'apiTokens',
+  'activity',
+  'access',
+  'svcmon',
+  'live',
+  'icons',
+].map((key) => ({ key, id: sectionId(HELP[key].title), label: HELP[key].title }));
+
+/** "A server's page" -> "a-servers-page". */
+function sectionId(title) {
+  return title.toLowerCase().replace(/'/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
 
 /**
  * One short explanation per form field, shown by the info icon (see Tip.svelte) next to the field's label.
