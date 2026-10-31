@@ -27,7 +27,6 @@
       <strong>{text.title}</strong>
       <span>{text.detail}</span>
     </div>
-    {#if text.where}<p class="secondary">{text.where}</p>{/if}
     {#if auth.error}<p class="form-error" role="status">{auth.error}</p>{/if}
 
     <button class="btn primary" type="button" onclick={checkAgain} disabled={busy}>{busy ? 'Checking…' : 'Check again'}</button>

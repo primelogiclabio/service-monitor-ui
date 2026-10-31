@@ -119,13 +119,10 @@ describe('opening the page', () => {
   });
 
   it('shows the refusal instead of the form when the hub does not let people in from here', async () => {
-    routes['GET /api/v1/session'] = () =>
-      reply(200, { signedIn: false, network: 'outside', address: '203.0.113.7', signInAllowed: false, signInRefusal: 'outside_not_allowed' });
+    routes['GET /api/v1/session'] = () => reply(200, { signedIn: false, signInAllowed: false, signInRefusal: 'outside_not_allowed' });
     const { auth, getApi, restore, screen } = await fresh();
     expect(await restore()).toBe(false);
     expect(auth.access).toEqual({
-      network: 'outside',
-      address: '203.0.113.7',
       signInAllowed: false,
       refusal: 'outside_not_allowed',
       passwordSignIn: true,
@@ -135,21 +132,30 @@ describe('opening the page', () => {
     expect(screen(true)).toBe('refused');
   });
 
-  it('shows the form from outside when the hub lets people in from there', async () => {
-    routes['GET /api/v1/session'] = () => reply(200, { signedIn: false, network: 'outside', address: '203.0.113.7', signInAllowed: true });
+  it('keeps nothing of where an older hub says the browser is', async () => {
+    routes['GET /api/v1/session'] = () =>
+      reply(200, { signedIn: false, network: 'outside', address: '203.0.113.7', signInAllowed: false, signInRefusal: 'outside_not_allowed' });
     const { auth, restore, screen } = await fresh();
     await restore();
-    expect(auth.access).toMatchObject({ network: 'outside', signInAllowed: true, refusal: '' });
+    expect(auth.access).not.toHaveProperty('network');
+    expect(auth.access).not.toHaveProperty('address');
+    expect(screen(true)).toBe('refused');
+  });
+
+  it('shows the form from outside when the hub lets people in from there', async () => {
+    routes['GET /api/v1/session'] = () => reply(200, { signedIn: false, signInAllowed: true });
+    const { auth, restore, screen } = await fresh();
+    await restore();
+    expect(auth.access).toMatchObject({ signInAllowed: true, refusal: '' });
     expect(screen(true)).toBe('login');
   });
 
   it('checking again after joining the network brings the form back', async () => {
-    routes['GET /api/v1/session'] = () =>
-      reply(200, { signedIn: false, network: 'outside', address: '203.0.113.7', signInAllowed: false, signInRefusal: 'outside_not_allowed' });
+    routes['GET /api/v1/session'] = () => reply(200, { signedIn: false, signInAllowed: false, signInRefusal: 'outside_not_allowed' });
     const { restore, screen } = await fresh();
     await restore();
     expect(screen(true)).toBe('refused');
-    routes['GET /api/v1/session'] = () => reply(200, { signedIn: false, network: 'inside', address: '10.0.0.7', signInAllowed: true });
+    routes['GET /api/v1/session'] = () => reply(200, { signedIn: false, signInAllowed: true });
     await restore();
     expect(screen(true)).toBe('login');
   });
@@ -375,14 +381,14 @@ describe('an active session', () => {
   it('leaves the dashboard for the refusal when the browser is no longer on the internal network', async () => {
     const { auth, getApi, screen } = await signedInAdmin();
     routes['GET /api/v1/status'] = () => reply(403, { error: 'outside_not_allowed', message: 'Access from outside the internal network is not allowed' });
-    routes['GET /api/v1/session'] = () =>
-      reply(200, { signedIn: false, network: 'outside', address: '198.51.100.4', signInAllowed: false, signInRefusal: 'outside_not_allowed' });
+    routes['GET /api/v1/session'] = () => reply(200, { signedIn: false, signInAllowed: false, signInRefusal: 'insecure_transport' });
 
     await expect(getApi().status()).rejects.toMatchObject({ status: 403, code: 'outside_not_allowed' });
     expect(auth).toMatchObject({ signedIn: false, user: '', error: '' });
     expect(getApi()).toBeNull();
     expect(screen(true)).toBe('refused');
-    await vi.waitFor(() => expect(auth.access.address).toBe('198.51.100.4'));
+    // ... and asks the hub again, which has the last word on what the refusal says.
+    await vi.waitFor(() => expect(auth.access.refusal).toBe('insecure_transport'));
   });
 
   it('Sign out asks the hub to end the sign-in, then shows the form', async () => {
@@ -414,8 +420,6 @@ describe('with an identity provider', () => {
   const PROVIDER = { label: 'Sign in with Keycloak', allowed: true, startUrl: 'https://monitor.example/api/v1/oidc/start' };
   const outside = (extra = {}) => ({
     signedIn: false,
-    network: 'outside',
-    address: '198.51.100.4',
     signInAllowed: true,
     passwordSignIn: false,
     provider: PROVIDER,
@@ -429,7 +433,7 @@ describe('with an identity provider', () => {
     expect(auth.access).toMatchObject({ passwordSignIn: false, provider: PROVIDER, refusal: '' });
     expect(screen(true)).toBe('login');
 
-    routes['GET /api/v1/session'] = () => reply(200, outside({ network: 'inside', passwordSignIn: true }));
+    routes['GET /api/v1/session'] = () => reply(200, outside({ passwordSignIn: true }));
     const inside = await fresh();
     await inside.restore();
     expect(inside.auth.access).toMatchObject({ passwordSignIn: true, provider: PROVIDER });
@@ -509,7 +513,7 @@ describe('with an identity provider', () => {
 
     await expect(getApi().status()).rejects.toMatchObject({ status: 403, code: 'password_inside_only' });
     expect(auth.signedIn).toBe(false);
-    expect(auth.error).toMatch(/sign in with the identity provider/);
+    expect(auth.error).toMatch(/sign in with your organisation's account/);
     expect(screen(true)).toBe('login');
     await vi.waitFor(() => expect(auth.access.provider).toMatchObject(PROVIDER));
   });

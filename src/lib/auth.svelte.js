@@ -18,11 +18,13 @@ export const GATEWAY_STUCK =
  * `signedIn` means the dashboard may be used; a user whose password must be changed first has `mustChangePassword`
  * instead, and can do only that. `role` is 'ADMIN' or 'READ' and `admin` says which.
  *
- * `access` is how the hub sees this browser, from GET /session: `{ network, address, signInAllowed, refusal,
- * passwordSignIn, provider }`, where `refusal` is the hub's code ('outside_not_allowed' or 'insecure_transport') when
- * it does not let people in from here, `passwordSignIn` says whether the password form may be used from here, and
- * `provider` is the identity provider's sign-in (`{ label, allowed, startUrl }`) on a hub that has one, else null.
- * It is null when the hub did not say (an older hub). `viaProvider` is true for a user who signs in with the
+ * `access` is which ways in the hub offers this browser, from GET /session: `{ signInAllowed, refusal, passwordSignIn,
+ * provider }`, where `refusal` is the hub's code ('outside_not_allowed' or 'insecure_transport') when it does not let
+ * people in from here, `passwordSignIn` says whether the password form may be used from here, and `provider` is the
+ * identity provider's sign-in (`{ label, allowed, startUrl }`) on a hub that has one, else null. It is null when the
+ * hub did not say (an older hub). It never holds whether the hub counts the browser as inside or outside, nor the
+ * address it sees: a visitor is not told that (an older hub says it anyway), and Settings > Access shows it to people
+ * signed in. `viaProvider` is true for a user who signs in with the
  * identity provider and so has no password on the hub.
  *
  * A gateway in front of the hub (Keycloak through nginx, say) is only a gate: it lets the page through, and then the
@@ -105,15 +107,13 @@ export function reloadForGateway() {
   return true;
 }
 
-/** What GET or POST /session said about this browser's network, or null when the hub did not say. */
+/** What GET or POST /session said about the ways in from here, or null when the hub did not say. */
 function accessFrom(state) {
-  if (!state?.network) return null;
+  if (typeof state?.signInAllowed !== 'boolean') return null;
   const p = state.provider;
   const startUrl = webAddress(p?.startUrl);
   return {
-    network: state.network,
-    address: state.address ?? '',
-    signInAllowed: state.signInAllowed !== false,
+    signInAllowed: state.signInAllowed,
     refusal: state.signInRefusal ?? '',
     // An older hub does not say, and has no other way in than the password.
     passwordSignIn: state.passwordSignIn !== false,
@@ -142,7 +142,7 @@ function takeSignInError() {
 }
 
 function markRefused(code) {
-  auth.access = { ...(auth.access ?? { network: 'outside', address: '' }), signInAllowed: false, refusal: code };
+  auth.access = { ...(auth.access ?? { passwordSignIn: false, provider: null }), signInAllowed: false, refusal: code };
 }
 
 /**
@@ -179,7 +179,7 @@ async function adopt(client, state) {
   auth.admin = auth.role === 'ADMIN';
   auth.mustChangePassword = must;
   auth.signedIn = !must;
-  if (state.network) auth.access = accessFrom(state);
+  auth.access = accessFrom(state) ?? auth.access;
   auth.hub = hub;
   auth.error = '';
 }

@@ -31,7 +31,7 @@ export function signInMessage(err) {
     case 'cross_site':
       return "The hub refused the request because it did not come from the hub's own page. Open the dashboard at the hub's address.";
     case 'password_inside_only':
-      return 'From outside the internal network, sign in with the identity provider.';
+      return "From here, sign in with your organisation's account.";
     default:
       return err?.message || 'Signing in failed.';
   }
@@ -56,13 +56,13 @@ export function providerSignInMessage(code) {
     case 'provider_refused':
       return 'The identity provider did not sign you in. Try again, or ask an administrator.';
     case 'provider_unavailable':
-      return 'The identity provider could not be reached. Try again later, or sign in with a password from the internal network.';
+      return 'The identity provider could not be reached. Try again later, or ask an administrator.';
     case 'invalid_response':
       return "The identity provider's answer failed the hub's checks, so you were not signed in. Ask an administrator to look at the hub's log.";
     case 'outside_not_allowed':
-      return 'Signing in from outside the internal network is not allowed.';
+      return 'This hub cannot be used from here.';
     case 'insecure_transport':
-      return 'From outside the internal network the hub works over HTTPS only.';
+      return 'This hub needs HTTPS from here: open it with its https:// address.';
     case 'not_configured':
       return 'This hub has no identity provider.';
     default:

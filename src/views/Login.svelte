@@ -10,7 +10,8 @@
   let error = $state('');
 
   // The identity provider's button, on a hub that has one; the password form unless the hub takes only the provider
-  // from here (outside the internal network). An older hub says nothing, and then the form is all there is.
+  // from here. The page does not say why: a visitor is not told where the hub places them. An older hub says nothing,
+  // and then the form is all there is.
   const provider = $derived(auth.access?.provider?.allowed ? auth.access.provider : null);
   const passwordForm = $derived(auth.access?.passwordSignIn !== false);
 
@@ -71,8 +72,6 @@
       </form>
     {:else if !provider}
       <p class="form-error" role="alert">This hub takes no sign-in from here.</p>
-    {:else}
-      <p class="hint">From outside the hub's internal network, only this sign-in works.</p>
     {/if}
 
     <div class="row between small muted">

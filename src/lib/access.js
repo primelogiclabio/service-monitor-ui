@@ -20,22 +20,19 @@ export function endsSignIn(code) {
 }
 
 /**
- * What the page says instead of the sign-in form. `access` is what GET /session said about this browser:
- * `{ network, address, refusal }`.
+ * What the page says instead of the sign-in form. `access` is what GET /session said about the ways in:
+ * `{ refusal }`. It tells a visitor what to do, not where the hub places them or the address it sees.
  */
 export function refusalText(access) {
-  const where = access?.address ? `This hub sees this browser at ${access.address}, outside its internal network.` : '';
   if (access?.refusal === 'insecure_transport') {
     return {
-      title: 'This hub works over HTTPS only from outside the internal network',
-      detail: 'Open it with its https:// address, or from inside the network.',
-      where,
+      title: 'This hub needs HTTPS from here',
+      detail: 'Open it with its https:// address.',
     };
   }
   return {
-    title: 'Access from outside the internal network is not allowed',
-    detail: 'Open the dashboard from inside the network, for example over the VPN, or ask an administrator.',
-    where,
+    title: 'This hub cannot be used from here',
+    detail: "Open the dashboard from your organisation's network, for example over the VPN, or ask an administrator.",
   };
 }
 

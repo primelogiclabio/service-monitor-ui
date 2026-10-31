@@ -11,21 +11,32 @@ describe('a refusal for where the browser is', () => {
     }
   });
 
-  it('says that access from outside is not allowed, and where the hub sees the browser', () => {
-    const text = refusalText({ network: 'outside', address: '203.0.113.7', refusal: 'outside_not_allowed' });
-    expect(text.title).toBe('Access from outside the internal network is not allowed');
-    expect(text.where).toBe('This hub sees this browser at 203.0.113.7, outside its internal network.');
+  it('says the hub cannot be used from here, and what to do', () => {
+    const text = refusalText({ refusal: 'outside_not_allowed' });
+    expect(text.title).toBe('This hub cannot be used from here');
+    expect(text.detail).toMatch(/VPN/);
+    expect(refusalText(null)).toEqual(text);
   });
 
   it('asks for HTTPS when that is all that is missing', () => {
-    const text = refusalText({ network: 'outside', address: '203.0.113.7', refusal: 'insecure_transport' });
-    expect(text.title).toMatch(/HTTPS only/);
+    const text = refusalText({ refusal: 'insecure_transport' });
+    expect(text.title).toMatch(/HTTPS/);
     expect(text.detail).toMatch(/https:\/\//);
   });
 
-  it('still reads well when the hub did not say the address', () => {
-    expect(refusalText({ refusal: 'outside_not_allowed' }).where).toBe('');
-    expect(refusalText(null).title).toMatch(/not allowed/);
+  it('never tells a visitor where the hub places them, nor an address an older hub sent', () => {
+    for (const refusal of ['outside_not_allowed', 'insecure_transport', '']) {
+      const text = refusalText({ network: 'outside', address: '203.0.113.7', refusal });
+      expect(Object.values(text).join(' ')).not.toMatch(/outside|inside|internal|203\.0\.113\.7/i);
+    }
+  });
+
+  it('nor do the sign-in and refusal screens', () => {
+    for (const view of ['Login', 'Refused']) {
+      const source = readFileSync(new URL(`../src/views/${view}.svelte`, import.meta.url), 'utf8');
+      const markup = source.slice(source.indexOf('</script>'));
+      expect(markup, view).not.toMatch(/outside|inside|internal network|access\.address|access\.network/i);
+    }
   });
 });
 
