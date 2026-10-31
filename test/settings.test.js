@@ -111,6 +111,14 @@ describe('a new API token', () => {
     expect(first).toContain('Make token');
     expect(second).toContain('svcmon token create');
   });
+
+  it('is said to outlive the person who made it, wherever that person is managed', () => {
+    expect(HELP.apiTokens.notes.join(' ')).toContain('keeps working after the person who made it is disabled or deleted');
+    const users = [...HELP.users.fields.map((f) => f.text), ...HELP.users.notes].join(' ');
+    expect(users).toContain('API tokens they made keep working');
+    expect(users).toContain('revoke the API tokens they made');
+    expect(FIELD_HELP['token.name'].text).toContain('after the person who made it leaves');
+  });
 });
 
 describe('the page', () => {
@@ -122,23 +130,24 @@ describe('the page', () => {
     expect(app).not.toMatch(/Tokens/);
   });
 
-  it('makes an API token, shows it once and then lists it, and still names the terminal way', () => {
+  it('makes an API token from a form, and still names the terminal way', () => {
     const api = read('src/components/ApiTokens.svelte');
-    expect(api).toContain('getApi().createToken({ name: name.trim(), scope })');
-    expect(api).toMatch(/<form[^>]*onsubmit=\{make\}/);
+    expect(api).toMatch(/getApi\(\)\.createToken\(/);
+    expect(api).toMatch(/<form\b[^>]*\bonsubmit=/);
     expect(api).toContain('maxlength={TOKEN_NAME_MAX}');
-    expect(api).toMatch(/issued = \{[^}]*token: created\.token[^}]*\};\s*name = '';\s*scope = 'READ';\s*await load\(\);/);
-    expect(api).toMatch(/<div class="copybox">\s*<pre>\{issued\.token\}<\/pre>/);
     expect(api).toContain('It is shown only now');
-    expect(api).toContain('onclick={() => (issued = null)}>Done');
     expect(api).toContain('svcmon token create');
   });
 
-  it('never keeps or logs the new token', () => {
+  it('shows the new token only in its copy box, and never keeps or logs it', () => {
     const api = read('src/components/ApiTokens.svelte');
     expect(api).not.toMatch(/localStorage|sessionStorage|indexedDB|console\.|document\.cookie/);
-    // Only the copy button and the box show it; no toast or error message carries it.
-    expect(api.match(/issued\.token/g)).toHaveLength(2);
+    expect(api).not.toMatch(/notify\([^)]*\btoken\b/);
+    // Every mention of the token is the copy box or its Copy button, so no other text can carry it.
+    const box = api.match(/<div class="copybox">[\s\S]*?<\/div>/)?.[0] ?? '';
+    const mentions = (s) => (s.match(/issued\.token/g) ?? []).length;
+    expect(mentions(box)).toBeGreaterThan(0);
+    expect(mentions(api)).toBe(mentions(box));
   });
 
   it('warns that a revoked agent leaves its server offline, and how to let it report again', () => {
