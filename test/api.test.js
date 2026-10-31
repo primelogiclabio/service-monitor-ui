@@ -42,6 +42,20 @@ describe('createApi', () => {
     expect(headers).toEqual(['1', undefined, '1']);
   });
 
+  it('makes an API token from the signed-in session, and hands back the one answer that holds it', async () => {
+    const issued = { id: 't1', name: 'ops laptop', scope: 'READ', token: 'svcmon_x', expiresAt: null, cluster: null };
+    const fetchImpl = vi.fn(async () => reply(201, issued));
+    const api = createApi({ fetchImpl });
+    expect(await api.createToken({ name: 'ops laptop', scope: 'READ' })).toEqual(issued);
+    const [url, init] = fetchImpl.mock.calls[0];
+    expect(url).toBe('/api/v1/tokens');
+    expect(init.method).toBe('POST');
+    expect(init.body).toBe('{"name":"ops laptop","scope":"READ"}');
+    expect(init.headers['X-Svcmon-Request']).toBe('1');
+    expect(init.headers.Authorization).toBeUndefined();
+    expect(init.credentials).toBe('same-origin');
+  });
+
   it('sends JSON bodies with a content type', async () => {
     const fetchImpl = vi.fn(async () => reply(201, { id: 'c1' }));
     const api = createApi({ fetchImpl });

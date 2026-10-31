@@ -107,6 +107,7 @@ export function createApi({ fetchImpl, onUnauthorized, onRefused, onGateway } = 
     updateServer: (serverId, patch) => request('PATCH', `/servers/${id(serverId)}`, patch),
     deleteServer: (serverId) => request('DELETE', `/servers/${id(serverId)}`),
     tokens: () => request('GET', '/tokens'),
+    createToken: (body) => request('POST', '/tokens', body),
     revokeToken: (tokenId) => request('DELETE', `/tokens/${id(tokenId)}`),
     enrollmentToken: (body) => request('POST', '/enrollment-tokens', body),
     joinKeys: () => request('GET', '/join-keys'),
