@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { HELP, parts } from '../src/lib/help.js';
+import { HELP, HELP_SECTIONS, parts } from '../src/lib/help.js';
 import { CHECK_TYPES } from '../src/lib/format.js';
 import { defaultThresholds } from '../src/lib/checks.js';
 import {
@@ -26,6 +26,27 @@ describe('help topics', () => {
     }
     expect(HELP.addServer.steps.length).toBeGreaterThan(2);
     expect(HELP.addCheck.steps.length).toBeGreaterThan(2);
+  });
+
+  it('are all on the Help page, under ids made from their titles', () => {
+    expect(HELP_SECTIONS.map((s) => s.key).sort()).toEqual(Object.keys(HELP).sort());
+    const ids = HELP_SECTIONS.map((s) => s.id);
+    expect(ids).toEqual(expect.arrayContaining(['adding-a-server', 'adding-a-check', 'live-view', 'info-icons', 'a-servers-page']));
+    for (const s of HELP_SECTIONS) expect(s.label).toBe(HELP[s.key].title);
+  });
+
+  it('say that svcmon is both the agent and the command line, and how the command line gets a token', () => {
+    expect(HELP.svcmon.summary).toContain('agent');
+    expect(HELP.svcmon.fields.map((f) => f.name)).toEqual(expect.arrayContaining(['Agent commands', 'Hub commands']));
+    const tokens = allText(HELP.apiTokens).join(' ');
+    expect(tokens).toContain('svcmon token create');
+    expect(tokens).toContain('svcmon login');
+    expect(tokens).toContain('The svcmon program');
+  });
+
+  it('explain every status a badge can show', () => {
+    const names = HELP.dashboard.fields.map((f) => f.name);
+    expect(names).toEqual(['Up', 'Warning', 'Down', 'Unknown', 'Disabled', 'Offline']);
   });
 
   it('explain every check type the form offers', () => {

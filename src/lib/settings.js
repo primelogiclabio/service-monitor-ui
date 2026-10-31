@@ -1,13 +1,16 @@
 // What the Settings page shows: its sections by role, and the hub's token list (GET /tokens) sorted into them.
 
-/** In page order. `admin` sections are only for administrators; the hub refuses the rest anyway. */
+/**
+ * In page order. `admin` sections are only for administrators; the hub refuses the rest anyway. `help` is the
+ * section's topic in help.js, shown by the page's Help button.
+ */
 export const SETTINGS_SECTIONS = [
-  { key: 'account', label: 'Account', admin: false },
-  { key: 'users', label: 'Users', admin: true },
-  { key: 'agents', label: 'Agents', admin: true },
-  { key: 'api', label: 'API tokens', admin: true },
-  { key: 'activity', label: 'Activity', admin: true },
-  { key: 'access', label: 'Access', admin: false },
+  { key: 'account', label: 'Account', admin: false, help: 'account' },
+  { key: 'users', label: 'Users', admin: true, help: 'users' },
+  { key: 'agents', label: 'Agents', admin: true, help: 'agents' },
+  { key: 'api', label: 'API tokens', admin: true, help: 'apiTokens' },
+  { key: 'activity', label: 'Activity', admin: true, help: 'activity' },
+  { key: 'access', label: 'Access', admin: false, help: 'access' },
 ];
 
 export function sectionsFor(admin) {

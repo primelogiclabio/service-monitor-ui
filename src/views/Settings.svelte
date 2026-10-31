@@ -1,7 +1,8 @@
 <script>
   import { auth } from '../lib/auth.svelte.js';
   import { route, navigate } from '../lib/route.svelte.js';
-  import { pickSection, sectionsFor } from '../lib/settings.js';
+  import { SETTINGS_SECTIONS, pickSection, sectionsFor } from '../lib/settings.js';
+  import WithHelp from '../components/WithHelp.svelte';
   import AccountSettings from '../components/AccountSettings.svelte';
   import UserList from '../components/UserList.svelte';
   import AgentTokens from '../components/AgentTokens.svelte';
@@ -11,8 +12,12 @@
 
   const sections = $derived(sectionsFor(auth.admin));
   const section = $derived(pickSection(route.params.section, auth.admin));
+  const helpTopic = $derived(SETTINGS_SECTIONS.find((s) => s.key === section).help);
 </script>
 
+<!-- Keyed so the Help button and panel follow the section. -->
+{#key helpTopic}
+<WithHelp topic={helpTopic}>
 <div class="stack-lg">
   <div class="stack">
     <div>
@@ -46,3 +51,5 @@
     <AccountSettings />
   {/if}
 </div>
+</WithHelp>
+{/key}

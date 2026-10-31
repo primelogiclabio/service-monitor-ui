@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { SETTINGS_SECTIONS, groupTokens, pickSection, sectionsFor, serverNamesFrom, serverSeenFrom } from '../src/lib/settings.js';
+import { HELP } from '../src/lib/help.js';
 
 const NOW = 1_800_000_000_000;
 const HOUR = 3_600_000;
@@ -11,6 +12,12 @@ describe('the sections of Settings', () => {
     expect(sectionsFor(false).map((s) => s.key)).toEqual(['account', 'access']);
     expect(sectionsFor(true).map((s) => s.key)).toEqual(['account', 'users', 'agents', 'api', 'activity', 'access']);
     expect(SETTINGS_SECTIONS.every((s) => s.label)).toBe(true);
+  });
+
+  it('each have their own help topic', () => {
+    const topics = SETTINGS_SECTIONS.map((s) => s.help);
+    expect(new Set(topics).size).toBe(topics.length);
+    for (const s of SETTINGS_SECTIONS) expect(HELP, s.key).toHaveProperty(s.help);
   });
 
   it('open the one the address asks for, if the role allows it', () => {

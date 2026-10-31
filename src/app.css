@@ -386,13 +386,15 @@ th[title],
 .with-help.open {
   grid-template-columns: minmax(0, 3fr) minmax(320px, 2fr);
 }
+.help-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
 .with-help > .help-toggle {
   position: absolute;
   top: 0;
   right: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
 }
 .with-help.bar > .help-toggle {
   position: static;
@@ -442,7 +444,8 @@ th[title],
 .help-body dl {
   margin: 0;
   display: grid;
-  grid-template-columns: max-content 1fr;
+  /* A long name wraps rather than squeezing the explanation. */
+  grid-template-columns: fit-content(10em) 1fr;
   gap: 6px 14px;
 }
 .help-body dt {

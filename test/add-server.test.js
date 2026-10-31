@@ -93,8 +93,11 @@ describe('the jump menu on the Help page', () => {
     }
   });
 
-  it('starts with the topics that have their own help', () => {
-    expect(HELP_SECTIONS.map((s) => s.label).slice(0, 2)).toEqual([HELP.addServer.title, HELP.addCheck.title]);
+  it('follows the screens, from the dashboard to the general notes', () => {
+    const keys = HELP_SECTIONS.map((s) => s.key);
+    expect(keys[0]).toBe('dashboard');
+    expect(keys.slice(-2)).toEqual(['live', 'icons']);
+    expect(HELP_SECTIONS.find((s) => s.key === 'addServer').label).toBe(HELP.addServer.title);
   });
 
   it('marks the last section whose top has reached the reading line', () => {

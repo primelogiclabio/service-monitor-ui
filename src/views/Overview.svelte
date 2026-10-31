@@ -5,6 +5,7 @@
   import { serverHref } from '../lib/router.js';
   import StatusBadge from '../components/StatusBadge.svelte';
   import CheckTable from '../components/CheckTable.svelte';
+  import WithHelp from '../components/WithHelp.svelte';
 
   let cluster = $state('all');
   let query = $state('');
@@ -49,6 +50,8 @@
   }
 </script>
 
+<WithHelp topic="dashboard" placed>
+{#snippet children(help)}
 <div class="stack-lg" class:stale={status.loading && !data}>
   {#if !data}
     <div class="hero"><div><h1>{head.text}…</h1></div></div>
@@ -62,9 +65,10 @@
           {data.summary.checks.up + data.summary.checks.warn + data.summary.checks.down + data.summary.checks.unknown} checks
         </p>
       </div>
-      {#if auth.admin}
-        <a class="btn primary hero-action" href="#/enroll">Add server</a>
-      {/if}
+      <div class="row hero-action">
+        {@render help()}
+        {#if auth.admin}<a class="btn primary" href="#/enroll">Add server</a>{/if}
+      </div>
     </section>
 
     <section class="tiles" aria-label="Summary">
@@ -146,3 +150,5 @@
     {/if}
   {/if}
 </div>
+{/snippet}
+</WithHelp>
