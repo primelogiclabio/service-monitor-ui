@@ -42,16 +42,26 @@
   }
 </script>
 
-<section class="card stack" aria-labelledby="acct-pw">
-  <div>
-    <h2 id="acct-pw">Change your password</h2>
+{#if auth.viaProvider}
+  <section class="card stack" aria-labelledby="acct-pw">
+    <h2 id="acct-pw">Your account</h2>
     <p class="secondary">
-      Signed in as <strong>{auth.user}</strong>, with {auth.admin ? 'administrator' : 'read-only'} access. Changing the
-      password signs you out everywhere else.
+      Signed in as <strong>{auth.user}</strong>, with {auth.admin ? 'administrator' : 'read-only'} access, through the
+      identity provider. Your password, and the role that gives you this access, are kept there, not on this hub.
     </p>
-  </div>
-  <div style="max-width: 420px"><PasswordForm onchanged={changed} /></div>
-</section>
+  </section>
+{:else}
+  <section class="card stack" aria-labelledby="acct-pw">
+    <div>
+      <h2 id="acct-pw">Change your password</h2>
+      <p class="secondary">
+        Signed in as <strong>{auth.user}</strong>, with {auth.admin ? 'administrator' : 'read-only'} access. Changing the
+        password signs you out everywhere else.
+      </p>
+    </div>
+    <div style="max-width: 420px"><PasswordForm onchanged={changed} /></div>
+  </section>
+{/if}
 
 <section class="card stack" aria-labelledby="acct-sessions">
   <h2 id="acct-sessions">Where you are signed in</h2>

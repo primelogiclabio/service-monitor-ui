@@ -3,7 +3,7 @@
   import { auth, getApi } from '../lib/auth.svelte.js';
   import { notify } from '../lib/notify.svelte.js';
   import { fmtDateTime } from '../lib/format.js';
-  import { ROLES, roleLabel, userAction, userStatus, usernameProblem } from '../lib/account.js';
+  import { ROLES, roleLabel, userAction, userSignIn, userStatus, usernameProblem } from '../lib/account.js';
   import ConfirmDialog from './ConfirmDialog.svelte';
   import Tip from './Tip.svelte';
 
@@ -134,7 +134,7 @@
     <div class="table-wrap">
       <table class="data">
         <thead>
-          <tr><th>Name</th><th>Role</th><th>Status</th><th class="hide-sm">Last sign-in</th><th></th></tr>
+          <tr><th>Name</th><th>Role</th><th>Status</th><th class="hide-sm">Signs in with</th><th class="hide-sm">Last sign-in</th><th></th></tr>
         </thead>
         <tbody>
           {#each users as u (u.id)}
@@ -143,18 +143,23 @@
               <td>{u.username}{#if self}<span class="source-tag">you</span>{/if}</td>
               <td>{roleLabel(u.role)}</td>
               <td>{userStatus(u)}</td>
+              <td class="hide-sm">{userSignIn(u)}</td>
               <td class="hide-sm">{u.lastSignInAt ? fmtDateTime(u.lastSignInAt) : 'never'}</td>
               <td class="num">
                 {#if self}
-                  <span class="small muted">Change your password under Account</span>
+                  <span class="small muted">{u.provider ? 'Your role comes from the identity provider' : 'Change your password under Account'}</span>
                 {:else}
                   <div class="row" style="justify-content: flex-end">
-                    {#if u.role === 'ADMIN'}
+                    {#if u.provider}
+                      <span class="small muted" title="The hub takes this user's role from the identity provider at every sign-in, and they have no password here.">Role from the provider</span>
+                    {:else if u.role === 'ADMIN'}
                       <button class="btn small" type="button" onclick={() => (pending = { kind: 'role', user: u, role: 'READ' })}>Make read-only</button>
                     {:else}
                       <button class="btn small" type="button" onclick={() => (pending = { kind: 'role', user: u, role: 'ADMIN' })}>Make administrator</button>
                     {/if}
-                    <button class="btn small" type="button" onclick={() => (pending = { kind: 'reset', user: u })}>Reset password</button>
+                    {#if !u.provider}
+                      <button class="btn small" type="button" onclick={() => (pending = { kind: 'reset', user: u })}>Reset password</button>
+                    {/if}
                     {#if u.disabled}
                       <button class="btn small" type="button" onclick={() => (pending = { kind: 'enable', user: u })}>Enable</button>
                     {:else}
