@@ -123,7 +123,14 @@ describe('opening the page', () => {
       reply(200, { signedIn: false, network: 'outside', address: '203.0.113.7', signInAllowed: false, signInRefusal: 'outside_not_allowed' });
     const { auth, getApi, restore, screen } = await fresh();
     expect(await restore()).toBe(false);
-    expect(auth.access).toEqual({ network: 'outside', address: '203.0.113.7', signInAllowed: false, refusal: 'outside_not_allowed' });
+    expect(auth.access).toEqual({
+      network: 'outside',
+      address: '203.0.113.7',
+      signInAllowed: false,
+      refusal: 'outside_not_allowed',
+      passwordSignIn: true,
+      provider: null,
+    });
     expect(getApi()).toBeNull();
     expect(screen(true)).toBe('refused');
   });
@@ -400,5 +407,110 @@ describe('an active session', () => {
     expect(auth.signedIn).toBe(false);
     expect(getApi()).toBeNull();
     expect(auth.error).toMatch(/could not be reached/);
+  });
+});
+
+describe('with an identity provider', () => {
+  const PROVIDER = { label: 'Sign in with Keycloak', allowed: true, startUrl: 'https://monitor.example/api/v1/oidc/start' };
+  const outside = (extra = {}) => ({
+    signedIn: false,
+    network: 'outside',
+    address: '198.51.100.4',
+    signInAllowed: true,
+    passwordSignIn: false,
+    provider: PROVIDER,
+    ...extra,
+  });
+
+  it('offers the provider and, from outside, no password form', async () => {
+    routes['GET /api/v1/session'] = () => reply(200, outside());
+    const { auth, restore, screen } = await fresh();
+    await restore();
+    expect(auth.access).toMatchObject({ passwordSignIn: false, provider: PROVIDER, refusal: '' });
+    expect(screen(true)).toBe('login');
+
+    routes['GET /api/v1/session'] = () => reply(200, outside({ network: 'inside', passwordSignIn: true }));
+    const inside = await fresh();
+    await inside.restore();
+    expect(inside.auth.access).toMatchObject({ passwordSignIn: true, provider: PROVIDER });
+  });
+
+  it('an older hub that says nothing about either still gets the password form', async () => {
+    routes['GET /api/v1/session'] = () => reply(200, { signedIn: false, network: 'inside', address: '10.0.0.5', signInAllowed: true });
+    const { auth, restore } = await fresh();
+    await restore();
+    expect(auth.access).toMatchObject({ passwordSignIn: true, provider: null });
+  });
+
+  it('never follows a start address that is not a web address', async () => {
+    routes['GET /api/v1/session'] = () => reply(200, outside({ provider: { ...PROVIDER, startUrl: 'javascript:alert(1)' } }));
+    const { auth, restore } = await fresh();
+    await restore();
+    expect(auth.access.provider).toBeNull();
+  });
+
+  it('explains a sign-in that came back with an error, and takes it out of the address', async () => {
+    const replaceState = vi.fn();
+    vi.stubGlobal('location', { search: '?signin_error=no_role', pathname: '/', hash: '#/settings' });
+    vi.stubGlobal('history', { replaceState });
+    routes['GET /api/v1/session'] = () => reply(200, outside());
+    const { auth, restore } = await fresh();
+    await restore();
+    expect(auth.error).toMatch(/none of the roles/);
+    expect(replaceState).toHaveBeenCalledWith(null, '', '/#/settings');
+  });
+
+  it('knows a user who signed in with the provider, who has no password here', async () => {
+    routes['GET /api/v1/session'] = () =>
+      reply(200, { ...signedIn('ADMIN'), user: { id: 'u1', name: 'alice', role: 'ADMIN', provider: true } });
+    const { auth, restore } = await fresh();
+    await restore();
+    expect(auth).toMatchObject({ signedIn: true, viaProvider: true, admin: true });
+  });
+
+  it('Sign out goes on to the provider when the hub names its sign-out', async () => {
+    const assign = vi.fn();
+    vi.stubGlobal('location', { assign });
+    routes['GET /api/v1/session'] = () =>
+      reply(200, { ...signedIn('ADMIN'), user: { id: 'u1', name: 'alice', role: 'ADMIN', provider: true } });
+    routes['DELETE /api/v1/session'] = () =>
+      reply(200, { providerSignOut: 'https://auth.example/realms/main/logout?client_id=svcmon' });
+    const { auth, logout, restore } = await fresh();
+    await restore();
+    await logout();
+    expect(auth.signedIn).toBe(false);
+    expect(assign).toHaveBeenCalledWith('https://auth.example/realms/main/logout?client_id=svcmon');
+
+    routes['DELETE /api/v1/session'] = () => reply(200, { providerSignOut: 'javascript:alert(1)' });
+    const again = await fresh();
+    await again.restore();
+    await again.logout();
+    expect(assign).toHaveBeenCalledOnce();
+  });
+
+  it('a password sign-in refused outside hides the form and keeps the provider', async () => {
+    routes['GET /api/v1/session'] = () => reply(200, outside({ passwordSignIn: true }));
+    routes['POST /api/v1/session'] = () =>
+      reply(403, { error: 'password_inside_only', message: 'From outside the internal network, sign in with the identity provider' });
+    const { auth, restore, screen, signIn } = await fresh();
+    await restore();
+    await expect(signIn({ username: 'alice', password: PASSWORD })).rejects.toMatchObject({ code: 'password_inside_only' });
+    expect(auth.access).toMatchObject({ passwordSignIn: false, provider: PROVIDER });
+    expect(screen(true)).toBe('login');
+  });
+
+  it('a password sign-in that stops working outside leaves for the provider sign-in, not a refusal', async () => {
+    routes['GET /api/v1/session'] = () => reply(200, signedIn('ADMIN'));
+    const { auth, getApi, restore, screen } = await fresh();
+    await restore();
+    routes['GET /api/v1/status'] = () =>
+      reply(403, { error: 'password_inside_only', message: 'From outside the internal network, sign in with the identity provider' });
+    routes['GET /api/v1/session'] = () => reply(200, outside());
+
+    await expect(getApi().status()).rejects.toMatchObject({ status: 403, code: 'password_inside_only' });
+    expect(auth.signedIn).toBe(false);
+    expect(auth.error).toMatch(/sign in with the identity provider/);
+    expect(screen(true)).toBe('login');
+    await vi.waitFor(() => expect(auth.access.provider).toMatchObject(PROVIDER));
   });
 });

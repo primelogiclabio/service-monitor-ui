@@ -1,4 +1,5 @@
-import { isRefusal } from './access.js';
+import { PASSWORD_INSIDE_ONLY, isRefusal } from './access.js';
+import { providerSignInMessage, signInMessage, webAddress } from './account.js';
 import { ApiError, createApi } from './api.js';
 import { loadConfig } from './config.js';
 
@@ -17,9 +18,12 @@ export const GATEWAY_STUCK =
  * `signedIn` means the dashboard may be used; a user whose password must be changed first has `mustChangePassword`
  * instead, and can do only that. `role` is 'ADMIN' or 'READ' and `admin` says which.
  *
- * `access` is how the hub sees this browser, from GET /session: `{ network, address, signInAllowed, refusal }`, where
- * `refusal` is the hub's code ('outside_not_allowed' or 'insecure_transport') when it does not let people in from
- * here. It is null when the hub did not say (an older hub).
+ * `access` is how the hub sees this browser, from GET /session: `{ network, address, signInAllowed, refusal,
+ * passwordSignIn, provider }`, where `refusal` is the hub's code ('outside_not_allowed' or 'insecure_transport') when
+ * it does not let people in from here, `passwordSignIn` says whether the password form may be used from here, and
+ * `provider` is the identity provider's sign-in (`{ label, allowed, startUrl }`) on a hub that has one, else null.
+ * It is null when the hub did not say (an older hub). `viaProvider` is true for a user who signs in with the
+ * identity provider and so has no password on the hub.
  *
  * A gateway in front of the hub (Keycloak through nginx, say) is only a gate: it lets the page through, and then the
  * person signs in here as usual. When its sign-in ends, its 401 makes the page reload so the gateway can ask again.
@@ -32,8 +36,12 @@ export const auth = $state({
   signedIn: false,
   mustChangePassword: false,
   user: '',
+  viaProvider: false,
   access: null,
 });
+
+/** The query parameter the hub sends the browser back with when a sign-in with the identity provider did not work. */
+const SIGNIN_ERROR = 'signin_error';
 
 let api = null;
 
@@ -100,12 +108,37 @@ export function reloadForGateway() {
 /** What GET or POST /session said about this browser's network, or null when the hub did not say. */
 function accessFrom(state) {
   if (!state?.network) return null;
+  const p = state.provider;
+  const startUrl = webAddress(p?.startUrl);
   return {
     network: state.network,
     address: state.address ?? '',
     signInAllowed: state.signInAllowed !== false,
     refusal: state.signInRefusal ?? '',
+    // An older hub does not say, and has no other way in than the password.
+    passwordSignIn: state.passwordSignIn !== false,
+    provider: p && startUrl ? { label: p.label || 'Sign in with single sign-on', allowed: p.allowed !== false, startUrl } : null,
   };
+}
+
+/**
+ * The `signin_error` the hub sent the browser back with, if any, taken out of the address so a reload does not show
+ * it again. Returns the message for it, or ''.
+ */
+function takeSignInError() {
+  const loc = globalThis.location;
+  if (!loc?.search) return '';
+  const params = new URLSearchParams(loc.search);
+  const code = params.get(SIGNIN_ERROR);
+  if (code === null) return '';
+  params.delete(SIGNIN_ERROR);
+  try {
+    const rest = params.toString();
+    globalThis.history?.replaceState(null, '', `${loc.pathname}${rest ? `?${rest}` : ''}${loc.hash ?? ''}`);
+  } catch {
+    // the message is still shown; the parameter stays in the address
+  }
+  return providerSignInMessage(code);
 }
 
 function markRefused(code) {
@@ -117,8 +150,14 @@ function markRefused(code) {
  * work from here, so show the refusal instead of a dashboard full of errors, and ask the hub for the current address.
  */
 function refuse(code) {
-  signOut();
-  markRefused(code);
+  if (code === PASSWORD_INSIDE_ONLY) {
+    // A password sign-in that the hub no longer takes from here: the identity provider's still works.
+    signOut(signInMessage({ code }));
+    if (auth.access) auth.access = { ...auth.access, passwordSignIn: false };
+  } else {
+    signOut();
+    markRefused(code);
+  }
   sessionClient()
     .session()
     .then((state) => {
@@ -136,6 +175,7 @@ async function adopt(client, state) {
   api = client;
   auth.user = state.user?.name ?? '';
   auth.role = state.user?.role ?? '';
+  auth.viaProvider = Boolean(state.user?.provider);
   auth.admin = auth.role === 'ADMIN';
   auth.mustChangePassword = must;
   auth.signedIn = !must;
@@ -153,6 +193,10 @@ export async function signIn({ username, password }) {
   } catch (e) {
     // The browser is somewhere the hub does not let people in from: show that, not a form that cannot work.
     if (e.status === 403 && isRefusal(e.code)) markRefused(e.code);
+    // From here only the identity provider's sign-in works: hide the form, keep its button.
+    if (e.status === 403 && e.code === PASSWORD_INSIDE_ONLY && auth.access) {
+      auth.access = { ...auth.access, passwordSignIn: false };
+    }
     throw e;
   }
   if (!state?.signedIn) throw new ApiError(500, 'The hub did not sign you in');
@@ -182,6 +226,7 @@ export async function restore() {
   } catch (e) {
     auth.error = e.message;
   }
+  const providerError = takeSignInError();
   const client = sessionClient();
   let state;
   try {
@@ -189,23 +234,34 @@ export async function restore() {
   } catch (e) {
     // Only an unreachable hub is worth a banner; any other answer just means there is nothing to resume.
     if (e.status === 0) auth.error = e.message;
+    else if (providerError) auth.error = providerError;
     return false;
   }
   auth.access = accessFrom(state);
-  if (!state?.signedIn) return false;
+  if (!state?.signedIn) {
+    if (providerError) auth.error = providerError;
+    return false;
+  }
   await adopt(client, state);
   return auth.signedIn;
 }
 
-/** The Sign out button: the hub ends the sign-in and clears its cookie, which the page cannot do itself. */
+/**
+ * The Sign out button: the hub ends the sign-in and clears its cookie, which the page cannot do itself. A sign-in made
+ * with the identity provider then goes on to the provider's sign-out, when the hub names one, so that ends too.
+ */
 export async function logout() {
   const client = api ?? sessionClient();
+  let answer;
   try {
-    await client.signOut();
-    signOut();
+    answer = await client.signOut();
   } catch {
     signOut('The hub could not be reached to end the sign-in. It ends by itself after a while without use.');
+    return;
   }
+  signOut();
+  const providerSignOut = webAddress(answer?.providerSignOut);
+  if (providerSignOut) globalThis.location?.assign(providerSignOut);
 }
 
 /** Forgets the session on this page only; see logout() for ending it at the hub. */
@@ -216,6 +272,7 @@ export function signOut(message = '') {
   auth.admin = false;
   auth.role = '';
   auth.user = '';
+  auth.viaProvider = false;
   auth.hub = null;
   auth.error = message;
 }

@@ -30,9 +30,60 @@ export function signInMessage(err) {
       return 'Sign-in with a user name and password is turned off on this hub.';
     case 'cross_site':
       return "The hub refused the request because it did not come from the hub's own page. Open the dashboard at the hub's address.";
+    case 'password_inside_only':
+      return 'From outside the internal network, sign in with the identity provider.';
     default:
       return err?.message || 'Signing in failed.';
   }
+}
+
+/**
+ * What to say when the hub sent the browser back from the identity provider with `?signin_error=<code>`. The codes
+ * are the hub's own; anything else gets the general line.
+ */
+export function providerSignInMessage(code) {
+  switch (code) {
+    case 'no_role':
+      return 'Your account at the identity provider has none of the roles that give access to this hub. Ask an administrator.';
+    case 'account_disabled':
+      return 'Your account on this hub is disabled. Ask an administrator.';
+    case 'username_taken':
+      return 'Another account on this hub already has your name, so the hub did not make one for you. Ask an administrator.';
+    case 'username_unusable':
+      return 'The identity provider gave no name this hub can use (letters, digits and . _ @ - only). Ask an administrator.';
+    case 'expired':
+      return 'The sign-in took too long, or was finished in another browser than the one that started it. Try again.';
+    case 'provider_refused':
+      return 'The identity provider did not sign you in. Try again, or ask an administrator.';
+    case 'provider_unavailable':
+      return 'The identity provider could not be reached. Try again later, or sign in with a password from the internal network.';
+    case 'invalid_response':
+      return "The identity provider's answer failed the hub's checks, so you were not signed in. Ask an administrator to look at the hub's log.";
+    case 'outside_not_allowed':
+      return 'Signing in from outside the internal network is not allowed.';
+    case 'insecure_transport':
+      return 'From outside the internal network the hub works over HTTPS only.';
+    case 'not_configured':
+      return 'This hub has no identity provider.';
+    default:
+      return 'Signing in with the identity provider did not work.';
+  }
+}
+
+/** `url` when it is an http or https address, else '': addresses from the hub are only ever followed as such. */
+export function webAddress(url) {
+  if (typeof url !== 'string') return '';
+  try {
+    const u = new URL(url);
+    return u.protocol === 'https:' || u.protocol === 'http:' ? u.href : '';
+  } catch {
+    return '';
+  }
+}
+
+/** How a user signs in, in a word or two. */
+export function userSignIn(user) {
+  return user.provider ? 'Identity provider' : 'Password';
 }
 
 /** What is wrong with a new password before it is sent, or '' when the hub may accept it. */
@@ -145,14 +196,16 @@ export function userAction(kind, user, role) {
     case 'enable':
       return {
         title: 'Enable user',
-        message: `Enable ${name}? They can sign in again with their password.`,
+        message: `Enable ${name}? They can sign in again with ${user.provider ? 'the identity provider' : 'their password'}.`,
         confirmLabel: 'Enable',
         danger: false,
       };
     case 'delete':
       return {
         title: 'Delete user',
-        message: `Delete ${name}? They are signed out and the account is gone for good. Disable it instead to keep it.`,
+        message: user.provider
+          ? `Delete ${name}? They are signed out and the account is gone, but the next time they sign in with the identity provider (and still have a role there) a new one is made. Disable it instead to keep them out.`
+          : `Delete ${name}? They are signed out and the account is gone for good. Disable it instead to keep it.`,
         confirmLabel: 'Delete',
         danger: true,
       };

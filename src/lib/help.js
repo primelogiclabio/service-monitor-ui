@@ -115,6 +115,7 @@ export const HELP = {
     notes: [
       'A sign-in ends after 60 minutes without use, and after 12 hours at most (the hub\'s `svcmon.sessions` settings). The dashboard refreshing itself does not count as use.',
       'Forgot your password? An administrator can give you a new temporary one under Users. If no administrator can sign in, someone on the hub\'s machine runs `java -jar svcmon-hub.jar users reset <name>`.',
+      'Signed in with your organisation\'s identity provider? Then your password and your role are kept there, and this page has no password to change.',
     ],
   },
   users: {
@@ -129,6 +130,7 @@ export const HELP = {
       { name: 'Read only', text: 'Can look at the dashboard, servers, checks and Settings, Access, and change only their own password.' },
       { name: 'Administrator', text: 'Can also add and change servers and checks, manage users, make and revoke API tokens, and revoke agent credentials.' },
       { name: 'Status', text: 'Active; Must change password (still on a temporary one); or Disabled.' },
+      { name: 'Signs in with', text: 'Password, or Identity provider for someone the hub made at their first sign-in with your organisation\'s provider (see Sign-in). Such a user has no password here, and their role comes from the provider at every sign-in, so neither can be changed on this page; Disable still keeps them out.' },
       { name: 'Reset password', text: 'Gives the user a new temporary password, shown once, and signs them out everywhere.' },
       { name: 'Disable, Enable', text: 'Disable signs the user out and stops them signing in, but keeps the account; Enable lets them back in. API tokens they made keep working.' },
       { name: 'Delete', text: 'Removes the account. What they did stays under Activity, and API tokens they made keep working.' },
@@ -189,6 +191,23 @@ export const HELP = {
       'Agents reporting are not listed; only their registration is.',
     ],
   },
+  signIn: {
+    title: 'Sign-in',
+    summary:
+      'How this hub signs people in with your organisation\'s identity provider (Keycloak, Entra ID, Okta, Auth0 and others), besides passwords. It is set in the hub\'s `application.yml` under `svcmon.oidc`; this page only shows it. Only administrators see it.',
+    fields: [
+      { name: 'Client id, Redirect URI, Post-logout redirect URI', text: 'What the provider needs to know about the hub. Copy them into the provider\'s client settings.' },
+      { name: 'How the hub signs in', text: 'The hub proves who it is to the provider with a key pair, so there is no client secret to keep: one it made itself, or one made with signing-keys-tool and given to it in files. Give the provider the public key address (JWKS URL), or paste the public key or upload the certificate shown below.' },
+      { name: 'Certificate expires', text: 'For a key pair from files: when its certificate stops being valid. The hub warns here and in its log from 30 days before; make a new pair in time and give the provider its certificate.' },
+      { name: 'Roles', text: 'The provider role that makes someone an administrator here, and the one for read-only (if any). Someone with neither cannot sign in. The role is read again at every sign-in.' },
+      { name: 'The banner', text: 'Whether the hub has reached the provider. Until it has, the provider\'s sign-in says it is unavailable and passwords still work from inside.' },
+    ],
+    notes: [
+      'From outside the internal network, people sign in with the provider only; passwords, temporary passwords and API tokens work from inside.',
+      'The first sign-in makes the person\'s user on this hub, linked to their account at the provider. Someone whose name another user already has is refused rather than given that account.',
+      'A new key pair: `java -jar svcmon-hub.jar oidc rotate-key` on the hub\'s machine for the hub\'s own; for one from files, make a new pair with signing-keys-tool and point the settings at it. A provider that fetches the public key address picks it up by itself; one that was given the key or certificate by hand needs the new one.',
+    ],
+  },
   access: {
     title: 'Access',
     summary:
@@ -200,7 +219,7 @@ export const HELP = {
     ],
     notes: [
       'It is set in the hub\'s `application.yml` under `svcmon.access`, not here, and applies when the hub restarts.',
-      'From outside, API tokens and first or temporary passwords never work.',
+      'From outside, API tokens and first or temporary passwords never work, and on a hub with an identity provider only the provider\'s sign-in does.',
       'Agents are never refused for where they are.',
       'To check it, open this page from a phone on mobile data: it should say outside.',
     ],
@@ -240,6 +259,7 @@ export const HELP_SECTIONS = [
   'agents',
   'apiTokens',
   'activity',
+  'signIn',
   'access',
   'svcmon',
   'live',

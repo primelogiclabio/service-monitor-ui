@@ -1,7 +1,7 @@
 // Client for the hub's REST API, on this page's own address. A signed-in user is known to the hub by a cookie the page
 // never sees, so the page holds no credential at all.
 
-import { isRefusal } from './access.js';
+import { endsSignIn } from './access.js';
 
 export class ApiError extends Error {
   constructor(status, message, code = '') {
@@ -69,8 +69,8 @@ export function createApi({ fetchImpl, onUnauthorized, onRefused, onGateway } = 
       const code = typeof data?.error === 'string' ? data.error : '';
       if (res.status === 401 && SIGNED_OUT.has(code)) onUnauthorized?.();
       if (res.status === 401 && !HUB_401.has(code)) onGateway?.();
-      // Refused for where the browser is (it moved off the internal network, say): no request from here will work.
-      if (res.status === 403 && isRefusal(code)) onRefused?.(code);
+      // Refused for where the browser is (it moved off the internal network, say): this sign-in will not work from here.
+      if (res.status === 403 && endsSignIn(code)) onRefused?.(code);
       throw new ApiError(res.status, data?.message ?? (text || res.statusText), code);
     }
     return data;
@@ -84,7 +84,10 @@ export function createApi({ fetchImpl, onUnauthorized, onRefused, onGateway } = 
     access: () => request('GET', '/access'),
     session: () => request('GET', '/session'),
     signIn: (body) => request('POST', '/session', body),
+    /** Ends the sign-in; for one made with the identity provider the answer may say where to sign out there too. */
     signOut: () => request('DELETE', '/session'),
+    /** How sign-in with the identity provider is set up (administrators). */
+    provider: () => request('GET', '/oidc'),
     liveTicket: (opts) => request('POST', '/session/live-ticket', undefined, opts),
     changePassword: (body) => request('PUT', '/me/password', body),
     sessions: () => request('GET', '/sessions'),
