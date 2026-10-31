@@ -127,7 +127,7 @@ export const HELP = {
     ],
     fields: [
       { name: 'Read only', text: 'Can look at the dashboard, servers, checks and Settings, Access, and change only their own password.' },
-      { name: 'Administrator', text: 'Can also add and change servers and checks, manage users, and revoke tokens and agent credentials.' },
+      { name: 'Administrator', text: 'Can also add and change servers and checks, manage users, make and revoke API tokens, and revoke agent credentials.' },
       { name: 'Status', text: 'Active; Must change password (still on a temporary one); or Disabled.' },
       { name: 'Reset password', text: 'Gives the user a new temporary password, shown once, and signs them out everywhere.' },
       { name: 'Disable, Enable', text: 'Disable signs the user out and stops them signing in, but keeps the account; Enable lets them back in.' },
@@ -157,17 +157,19 @@ export const HELP = {
     summary:
       'Tokens are for programs, not people: the `svcmon` command line and your own scripts use one to call the hub. People sign in with their own account instead. Only administrators see this page.',
     steps: [
-      'On a computer that already has an admin token, run `svcmon token create --name "ops laptop" --scope read` (or `--scope admin`). It prints the new token once.',
+      'Give the token a name that says what will use it, choose its access and click Make token. The hub shows the new token once: copy it before you click Done.',
+      'From a terminal that already has an admin token, `svcmon token create --name "ops laptop" --scope read` (or `--scope admin`) does the same and prints the new token once.',
       'Where the token will be used, run `svcmon login --hub <hub address> --token <token>`, which saves it for the `svcmon` commands; a script sends it as `Authorization: Bearer <token>`.',
     ],
     fields: [
-      { name: 'Access', text: 'Read can look; Admin can also make changes.' },
+      { name: 'Name', text: 'What the token is for, up to 100 characters. The list shows it, so you know which one to revoke.' },
+      { name: 'Access', text: 'Read only can look; Admin can also make changes.' },
       { name: 'Revoke', text: 'Anything using the token stops working at once. Only a hash is stored, so a lost token cannot be shown again: revoke it and make a new one.' },
       { name: 'The hub\'s own', text: '`bootstrap` and `initial-admin` are admin tokens the hub made when it was set up, `recovery-admin` one it made when started with `--svcmon.new-admin-token=true`. Revoke one that nothing uses any more.' },
     ],
     notes: [
       'A token works only from the hub\'s internal network (see Access).',
-      'No admin token at hand? Start the hub once with `--svcmon.new-admin-token=true`: it prints a new one, once, in its console or service log.',
+      'No administrator can sign in and no admin token is at hand? Start the hub once with `--svcmon.new-admin-token=true`: it prints a new one, once, in its console or service log.',
       '`svcmon` is one program with two jobs: the agent on a monitored server, and the command line anywhere (see The svcmon program).',
     ],
   },
@@ -357,7 +359,15 @@ export const FIELD_HELP = {
   },
   'user.role': {
     label: 'Role',
-    text: 'Read only can look at the dashboard, servers and checks but change nothing except their own password. Administrator can also change checks and servers, add servers, manage users and revoke tokens.',
+    text: 'Read only can look at the dashboard, servers and checks but change nothing except their own password. Administrator can also change checks and servers, add servers, manage users, and make and revoke tokens.',
+  },
+  'token.name': {
+    label: 'Token name',
+    text: 'What will use the token, for example the computer or script: 1 to 100 characters, any will do. The list shows it, so you know which one to revoke.',
+  },
+  'token.scope': {
+    label: 'Access',
+    text: 'Read only can look at the status, servers and checks but change nothing. Admin can do anything an administrator can, including managing users and tokens, so give it only to a program that makes changes.',
   },
   'server.cluster': {
     label: 'Cluster',

@@ -1,7 +1,17 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { SETTINGS_SECTIONS, groupTokens, pickSection, sectionsFor, serverNamesFrom, serverSeenFrom } from '../src/lib/settings.js';
-import { HELP } from '../src/lib/help.js';
+import {
+  API_SCOPES,
+  SETTINGS_SECTIONS,
+  TOKEN_NAME_MAX,
+  groupTokens,
+  pickSection,
+  sectionsFor,
+  serverNamesFrom,
+  serverSeenFrom,
+  tokenNameProblem,
+} from '../src/lib/settings.js';
+import { FIELD_HELP, HELP } from '../src/lib/help.js';
 
 const NOW = 1_800_000_000_000;
 const HOUR = 3_600_000;
@@ -80,6 +90,29 @@ describe('the hub token list, sorted for Settings', () => {
   });
 });
 
+describe('a new API token', () => {
+  it('can be read only or admin, as the hub allows, read only first', () => {
+    expect(API_SCOPES.map((s) => s.value)).toEqual(['READ', 'ADMIN']);
+    expect(API_SCOPES.every((s) => s.label)).toBe(true);
+  });
+
+  it('needs a name of 1 to 100 characters, any characters, as the hub does', () => {
+    expect(TOKEN_NAME_MAX).toBe(100);
+    expect(tokenNameProblem('ops laptop')).toBe('');
+    expect(tokenNameProblem('Grafana / prod: read-only ✓')).toBe('');
+    expect(tokenNameProblem('x'.repeat(100))).toBe('');
+    expect(tokenNameProblem('x'.repeat(101))).toBe('A token name is 1 to 100 characters');
+    expect(tokenNameProblem('')).toBe('A token name is 1 to 100 characters');
+    expect(FIELD_HELP['token.name'].text).toContain(`1 to ${TOKEN_NAME_MAX} characters`);
+  });
+
+  it('is explained in the help, starting with the button and keeping the terminal way', () => {
+    const [first, second] = HELP.apiTokens.steps;
+    expect(first).toContain('Make token');
+    expect(second).toContain('svcmon token create');
+  });
+});
+
 describe('the page', () => {
   const read = (p) => readFileSync(p, 'utf8');
 
@@ -89,10 +122,23 @@ describe('the page', () => {
     expect(app).not.toMatch(/Tokens/);
   });
 
-  it('has no form to create API tokens, and says how they are made', () => {
+  it('makes an API token, shows it once and then lists it, and still names the terminal way', () => {
     const api = read('src/components/ApiTokens.svelte');
-    expect(api).not.toMatch(/createToken|<form/);
+    expect(api).toContain('getApi().createToken({ name: name.trim(), scope })');
+    expect(api).toMatch(/<form[^>]*onsubmit=\{make\}/);
+    expect(api).toContain('maxlength={TOKEN_NAME_MAX}');
+    expect(api).toMatch(/issued = \{[^}]*token: created\.token[^}]*\};\s*name = '';\s*scope = 'READ';\s*await load\(\);/);
+    expect(api).toMatch(/<div class="copybox">\s*<pre>\{issued\.token\}<\/pre>/);
+    expect(api).toContain('It is shown only now');
+    expect(api).toContain('onclick={() => (issued = null)}>Done');
     expect(api).toContain('svcmon token create');
+  });
+
+  it('never keeps or logs the new token', () => {
+    const api = read('src/components/ApiTokens.svelte');
+    expect(api).not.toMatch(/localStorage|sessionStorage|indexedDB|console\.|document\.cookie/);
+    // Only the copy button and the box show it; no toast or error message carries it.
+    expect(api.match(/issued\.token/g)).toHaveLength(2);
   });
 
   it('warns that a revoked agent leaves its server offline, and how to let it report again', () => {

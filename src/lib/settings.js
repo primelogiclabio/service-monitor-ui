@@ -23,6 +23,20 @@ export function pickSection(requested, admin) {
   return (list.find((s) => s.key === requested) ?? list[0]).key;
 }
 
+/** The access an API token can have; the hub refuses any other scope for one. Read only first, the safer default. */
+export const API_SCOPES = [
+  { value: 'READ', label: 'Read only' },
+  { value: 'ADMIN', label: 'Admin' },
+];
+
+/** The hub refuses a blank token name or a longer one; any characters will do. */
+export const TOKEN_NAME_MAX = 100;
+
+/** Why the hub would refuse this (trimmed) token name, or '' when it would not. */
+export function tokenNameProblem(name) {
+  return name && name.length <= TOKEN_NAME_MAX ? '' : `A token name is 1 to ${TOKEN_NAME_MAX} characters`;
+}
+
 const AGENT_PREFIX = 'agent:';
 
 /**
