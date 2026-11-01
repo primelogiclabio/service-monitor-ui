@@ -212,6 +212,36 @@ describe('editing a channel', () => {
     expect(channelRequest(form, true).config).not.toHaveProperty('headers');
   });
 
+  it('sends a secret marked for removal as null, and only then', () => {
+    const hook = formFromChannel(webhook);
+    expect(hook.removeSigningSecret).toBe(false);
+    expect(channelRequest(hook, true).config).not.toHaveProperty('signingSecret');
+    hook.removeSigningSecret = true;
+    expect(channelRequest(hook, true).config).toEqual({ signingSecret: null, headers: { Authorization: MASK, 'X-Team': MASK } });
+    // A new channel has nothing stored to remove.
+    expect(channelRequest({ ...formFor('WEBHOOK', { url: 'https://alerts.internal/hook' }), removeSigningSecret: true }, false).config).toEqual({
+      url: 'https://alerts.internal/hook',
+    });
+
+    const mail = formFromChannel(email);
+    expect(mail.savedPassword).toBe(true);
+    mail.removePassword = true;
+    mail.username = '';
+    expect(channelProblem(mail, true)).toBe('');
+    const config = channelRequest(mail, true).config;
+    expect(config.password).toBeNull();
+    expect(config).not.toHaveProperty('username');
+  });
+
+  it('keeps the hub from refusing a saved password without a user name', () => {
+    const mail = formFromChannel(email);
+    mail.username = ' ';
+    expect(channelProblem(mail, true)).toBe('The saved password needs a user name: keep the user name, or remove the password too.');
+    const noPassword = formFromChannel({ ...email, config: { ...email.config, password: undefined } });
+    noPassword.username = '';
+    expect(channelProblem(noPassword, true)).toBe('');
+  });
+
   it('does not let a renamed header keep a stored value under its new name', () => {
     // The hub matches stored headers by name, so a masked value under a new name would be stored as the mask itself.
     const form = formFromChannel(webhook);
@@ -262,7 +292,9 @@ describe('the page', () => {
   });
 
   it('types secrets into password fields and keeps them nowhere else', () => {
-    for (const id of ['ac-pass', 'ac-secret']) expect(form).toMatch(new RegExp(`id="${id}" type="password"`));
+    for (const id of ['ac-pass', 'ac-secret']) expect(form).toMatch(new RegExp(`id="${id}"\\s+type="password"`));
+    // A saved secret is taken away with its own button, never by an empty field.
+    for (const flag of ['removePassword', 'removeSigningSecret']) expect(form).toContain(`toggleRemove('${flag}'`);
     expect(form).toMatch(/type="password"\s+bind:value=\{h\.value\}/);
     for (const text of [list, form]) expect(text).not.toMatch(/localStorage|sessionStorage|indexedDB|console\./);
   });
