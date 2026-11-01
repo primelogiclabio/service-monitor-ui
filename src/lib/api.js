@@ -116,5 +116,12 @@ export function createApi({ fetchImpl, onUnauthorized, onRefused, onGateway } = 
     joinKeys: () => request('GET', '/join-keys'),
     createJoinKey: (body) => request('POST', '/join-keys', body),
     revokeJoinKey: (keyId) => request('DELETE', `/join-keys/${id(keyId)}`),
+    /** Where the hub sends status changes (administrators); secrets come back masked. */
+    alertChannels: () => request('GET', '/alert-channels'),
+    createAlertChannel: (body) => request('POST', '/alert-channels', body),
+    replaceAlertChannel: (channelId, body) => request('PUT', `/alert-channels/${id(channelId)}`, body),
+    deleteAlertChannel: (channelId) => request('DELETE', `/alert-channels/${id(channelId)}`),
+    /** One delivery attempt now; always answers 200 with { ok, error }. */
+    testAlertChannel: (channelId) => request('POST', `/alert-channels/${id(channelId)}/test`),
   };
 }

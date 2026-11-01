@@ -11,6 +11,7 @@ export const SETTINGS_SECTIONS = [
   { key: 'users', label: 'Users', admin: true, help: 'users' },
   { key: 'agents', label: 'Agents', admin: true, help: 'agents' },
   { key: 'api', label: 'API tokens', admin: true, help: 'apiTokens' },
+  { key: 'alerts', label: 'Alerts', admin: true, help: 'alerts' },
   { key: 'activity', label: 'Activity', admin: true, help: 'activity' },
   { key: 'signin', label: 'Sign-in', admin: true, help: 'signIn' },
   { key: 'access', label: 'Access', admin: false, help: 'access' },
