@@ -196,7 +196,7 @@ export const HELP = {
       { name: 'State, Last delivered', text: 'Whether the latest message, a test included, arrived. Failing shows the error the hub got; Not sent yet means nothing has been sent since the channel was added.' },
     ],
     notes: [
-      'Webhook URLs, header values, the signing secret and the SMTP password are secrets: the hub shows them masked and never sends them back. When you edit a channel, leave one empty to keep it.',
+      'Webhook URLs, header values, the signing secret and the SMTP password are secrets: the hub shows them masked and never sends them back. When you edit a channel, leave one empty to keep it; a saved signing secret or SMTP password has a Remove button.',
       'A failing delivery is retried a few times when the problem looks temporary. The hub keeps no list of the messages it sent; the receiver has them.',
       'Disable a channel to pause it, for example during planned work, and keep its settings.',
     ],
@@ -438,7 +438,7 @@ export const FIELD_HELP = {
   },
   'alert.signingSecret': {
     label: 'Signing secret',
-    text: 'If set, the hub signs every message body with HMAC-SHA256 and sends `X-Svcmon-Signature: sha256=…`, so your receiver can check the message came from this hub. Up to 200 characters, shown masked after saving.',
+    text: 'If set, the hub signs every message body with HMAC-SHA256 and sends `X-Svcmon-Signature: sha256=…`, so your receiver can check the message came from this hub. Up to 200 characters, shown masked after saving. To stop signing, choose Remove beside the saved secret.',
   },
   'alert.headers': {
     label: 'Headers',
@@ -462,7 +462,7 @@ export const FIELD_HELP = {
   },
   'alert.password': {
     label: 'SMTP password',
-    text: "The mail account's password, if it has one. It is a secret: shown masked, and when you edit the channel an empty field keeps the saved one.",
+    text: "The mail account's password, if it has one. It is a secret: shown masked, and when you edit the channel an empty field keeps the saved one. Remove takes the saved one away; clear the user name too and the hub stops signing in.",
   },
   'alert.from': {
     label: 'From',

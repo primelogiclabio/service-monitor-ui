@@ -78,12 +78,15 @@ export function emptyForm(type = 'SLACK') {
     statuses: [...DEFAULT_STATUSES],
     url: '',
     signingSecret: '',
+    removeSigningSecret: false,
     headers: [],
     smtpHost: '',
     smtpPort: '',
     security: 'STARTTLS',
     username: '',
     password: '',
+    removePassword: false,
+    savedPassword: false,
     from: '',
     to: '',
     format: 'HTML',
@@ -92,8 +95,8 @@ export function emptyForm(type = 'SLACK') {
 
 /**
  * The form for editing a channel. Secrets start empty, which keeps the stored value; the form shows the masked one as a
- * hint. A stored header keeps its name in `original`, so an empty value keeps its stored value only while the name is
- * unchanged (the hub matches headers by name).
+ * hint, and `removeSigningSecret` / `removePassword` take a stored one away. A stored header keeps its name in
+ * `original`, so an empty value keeps its stored value only while the name is unchanged (the hub matches headers by name).
  */
 export function formFromChannel(ch) {
   const c = ch.config ?? {};
@@ -107,6 +110,7 @@ export function formFromChannel(ch) {
     smtpPort: c.smtpPort == null ? '' : String(c.smtpPort),
     security: c.security ?? 'STARTTLS',
     username: c.username ?? '',
+    savedPassword: Boolean(c.password),
     from: c.from ?? '',
     to: (c.to ?? []).join(', '),
     format: c.format ?? 'HTML',
@@ -126,8 +130,9 @@ export function splitAddresses(text) {
 
 /**
  * The request body for POST (add) or PUT (edit). A secret left empty is left out, which the hub reads as "keep the
- * stored one"; a stored header with an empty value is sent masked for the same reason. A header taken out of the list is
- * removed. The type is only sent on add: the hub cannot change it.
+ * stored one"; a stored header with an empty value is sent masked for the same reason. A secret marked for removal is
+ * sent as null, the only thing the hub reads as "remove". A header taken out of the list is removed. The type is only
+ * sent on add: the hub cannot change it.
  */
 export function channelRequest(form, editing) {
   const body = {
@@ -146,7 +151,8 @@ export function channelRequest(form, editing) {
     if (String(form.smtpPort).trim()) config.smtpPort = Number(form.smtpPort);
     config.security = form.security;
     put('username', form.username);
-    put('password', form.password);
+    if (editing && form.removePassword) config.password = null;
+    else put('password', form.password);
     put('from', form.from);
     config.to = splitAddresses(form.to);
     config.format = form.format;
@@ -154,7 +160,8 @@ export function channelRequest(form, editing) {
     put('url', form.url);
   }
   if (form.type === 'WEBHOOK') {
-    put('signingSecret', form.signingSecret);
+    if (editing && form.removeSigningSecret) config.signingSecret = null;
+    else put('signingSecret', form.signingSecret);
     const headers = {};
     for (const h of form.headers) {
       const name = h.name.trim();
@@ -180,6 +187,9 @@ export function channelProblem(form, editing) {
       return 'The SMTP port is a number from 1 to 65535.';
     }
     if (form.password.trim() && !form.username.trim()) return 'A password needs a user name.';
+    if (editing && form.savedPassword && !form.removePassword && !form.username.trim()) {
+      return 'The saved password needs a user name: keep the user name, or remove the password too.';
+    }
     if (!ADDRESS.test(form.from.trim())) return 'From is one email address, such as alerts@example.com.';
     const to = splitAddresses(form.to);
     if (!to.length || to.length > MAX_RECIPIENTS) return `Send to 1 to ${MAX_RECIPIENTS} email addresses.`;

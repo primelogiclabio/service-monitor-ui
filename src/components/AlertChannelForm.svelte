@@ -30,6 +30,12 @@
   };
   const keep = (masked) => (masked ? `Saved: ${masked}. Leave empty to keep it.` : '');
 
+  // Marks a stored secret for removal (or takes the mark back); a secret being removed has nothing to type.
+  function toggleRemove(flag, field) {
+    form[flag] = !form[flag];
+    if (form[flag]) form[field] = '';
+  }
+
   function toggleStatus(value, on) {
     form.statuses = on ? [...form.statuses, value] : form.statuses.filter((s) => s !== value);
   }
@@ -93,7 +99,21 @@
       </div>
       <div class="field">
         <div class="label-row"><label for="ac-pass">SMTP password{stored.password ? '' : ' (optional)'}</label><Tip field="alert.password" /></div>
-        <input id="ac-pass" type="password" bind:value={form.password} autocomplete="new-password" placeholder={stored.password ? 'Saved. Leave empty to keep it.' : ''} />
+        <div class="row" style="gap: 8px; flex-wrap: nowrap">
+          <input
+            id="ac-pass"
+            type="password"
+            bind:value={form.password}
+            disabled={form.removePassword}
+            autocomplete="new-password"
+            placeholder={form.removePassword ? 'Removed when you save.' : stored.password ? 'Saved. Leave empty to keep it.' : ''}
+          />
+          {#if edit && stored.password}
+            <button class="btn small" type="button" onclick={() => toggleRemove('removePassword', 'password')} aria-label={form.removePassword ? 'Keep the saved SMTP password' : 'Remove the saved SMTP password'}>
+              {form.removePassword ? 'Keep' : 'Remove'}
+            </button>
+          {/if}
+        </div>
       </div>
     </div>
     <div class="form-grid">
@@ -124,7 +144,21 @@
   {#if form.type === 'WEBHOOK'}
     <div class="field">
       <div class="label-row"><label for="ac-secret">Signing secret (optional)</label><Tip field="alert.signingSecret" /></div>
-      <input id="ac-secret" type="password" bind:value={form.signingSecret} autocomplete="new-password" placeholder={stored.signingSecret ? 'Saved. Leave empty to keep it.' : ''} />
+      <div class="row" style="gap: 8px; flex-wrap: nowrap">
+        <input
+          id="ac-secret"
+          type="password"
+          bind:value={form.signingSecret}
+          disabled={form.removeSigningSecret}
+          autocomplete="new-password"
+          placeholder={form.removeSigningSecret ? 'Removed when you save. Messages will not be signed.' : stored.signingSecret ? 'Saved. Leave empty to keep it.' : ''}
+        />
+        {#if edit && stored.signingSecret}
+          <button class="btn small" type="button" onclick={() => toggleRemove('removeSigningSecret', 'signingSecret')} aria-label={form.removeSigningSecret ? 'Keep the saved signing secret' : 'Remove the saved signing secret'}>
+            {form.removeSigningSecret ? 'Keep' : 'Remove'}
+          </button>
+        {/if}
+      </div>
     </div>
     <div class="field" role="group" aria-labelledby="ac-headers">
       <div class="label-row"><span id="ac-headers">Headers (optional)</span><Tip field="alert.headers" /></div>
