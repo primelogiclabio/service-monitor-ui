@@ -10,6 +10,7 @@ import {
   passwordChangeMessage,
   roleLabel,
   signInMessage,
+  tokenNames,
   userAction,
   userStatus,
   usernameProblem,
@@ -101,6 +102,34 @@ describe('users', () => {
     expect(userAction('delete', bob)).toMatchObject({ confirmLabel: 'Delete', danger: true });
     for (const kind of ['role', 'reset', 'disable', 'enable', 'delete']) expect(userAction(kind, bob, 'READ').message).toContain('“bob”');
     expect(() => userAction('promote', bob)).toThrow();
+  });
+
+  it('say what happens to the tokens that act for the user, and nothing when there are none', () => {
+    const bob = { username: 'bob' };
+    const owned = [
+      { name: 'bob-cli', scope: 'ADMIN' },
+      { name: 'fleet', scope: 'JOIN' },
+    ];
+    const del = userAction('delete', bob, null, owned).message;
+    expect(del).toContain('The 2 tokens that act for them (“bob-cli” and join key “fleet”) are revoked with the account');
+    expect(del).toMatch(/replacement first/);
+    expect(userAction('disable', bob, null, owned.slice(0, 1)).message).toContain(
+      'The token that acts for them (“bob-cli”) stops working until then too.',
+    );
+    expect(userAction('enable', bob, null, owned).message).toMatch(/work again\.$/);
+    expect(userAction('role', bob, 'READ', owned).message).toMatch(/can only read, and join keys and one-time tokens stop/);
+    expect(userAction('role', bob, 'ADMIN', owned).message).toMatch(/work fully again\.$/);
+    for (const kind of ['role', 'disable', 'enable', 'delete']) {
+      expect(userAction(kind, bob, 'READ', []).message, kind).not.toMatch(/token/);
+    }
+    expect(userAction('reset', bob, null, owned).message, 'a reset leaves tokens alone').not.toMatch(/token/);
+  });
+
+  it('name the first few tokens, then how many more', () => {
+    const t = (name, scope = 'READ') => ({ name, scope });
+    expect(tokenNames([t('a')])).toBe('“a”');
+    expect(tokenNames([t('a'), t('b', 'ENROLL'), t('c')])).toBe('“a”, one-time token “b” and “c”');
+    expect(tokenNames([t('a'), t('b'), t('c'), t('d'), t('e')])).toBe('“a”, “b”, “c” and 2 more');
   });
 });
 

@@ -132,11 +132,11 @@ export const HELP = {
       { name: 'Status', text: 'Active; Must change password (still on a temporary one); or Disabled.' },
       { name: 'Signs in with', text: 'Password, or Identity provider for someone the hub made at their first sign-in with your organisation\'s provider (see Sign-in). Such a user has no password here, and their role comes from the provider at every sign-in, so neither can be changed on this page; Disable still keeps them out.' },
       { name: 'Reset password', text: 'Gives the user a new temporary password, shown once, and signs them out everywhere.' },
-      { name: 'Disable, Enable', text: 'Disable signs the user out and stops them signing in, but keeps the account; Enable lets them back in. API tokens they made keep working.' },
-      { name: 'Delete', text: 'Removes the account. What they did stays under Activity, and API tokens they made keep working.' },
+      { name: 'Disable, Enable', text: 'Disable signs the user out and stops them signing in, but keeps the account; Enable lets them back in. The tokens they made stop working until then.' },
+      { name: 'Delete', text: 'Removes the account. What they did stays under Activity. The tokens they made are revoked with it; servers they added keep reporting.' },
     ],
     notes: [
-      'When someone leaves, also revoke the API tokens they made, under API tokens: a token belongs to no account, so disabling or deleting the person does not stop it.',
+      'Tokens a person made act for them: they stop while the person is disabled, can only read while the person is read-only, and are revoked when the account is deleted. Before deleting someone, make replacements for the ones a script still needs: the Delete dialog lists them.',
       'Changing someone\'s role signs them out, so the new role applies at once.',
       'Your own account is changed under Account, not here, and the hub always keeps at least one administrator.',
       'Agents, the `svcmon` command line and scripts do not use these accounts; they use tokens.',
@@ -169,9 +169,10 @@ export const HELP = {
       { name: 'Access', text: 'Read only can look; Admin can also make changes.' },
       { name: 'Revoke', text: 'Anything using the token stops working at once. Only a hash is stored, so a lost token cannot be shown again: revoke it and make a new one.' },
       { name: 'The hub\'s own', text: '`bootstrap` and `initial-admin` are admin tokens the hub made when it was set up, `recovery-admin` one it made when started with `--svcmon.new-admin-token=true`. Revoke one that nothing uses any more.' },
+      { name: 'Suspended, Read only for now', text: 'The person the token acts for is disabled, or read-only: it works again, or fully again, when they are enabled or made an administrator.' },
     ],
     notes: [
-      'A token belongs to no account. It keeps working after the person who made it is disabled or deleted, and it does not expire, so revoke it when they leave or it is no longer used. Activity lists who made a token and when (match the time with Created).',
+      'A token acts for the person who made it, and so does one made with it: it stops while they are disabled, can only read while they are read-only, and is revoked when their account is deleted. Otherwise it does not expire, so revoke it when it is no longer used. A token made from the command line with the hub\'s own token acts for nobody, and outlives the people who look after it. Activity lists who made a token and when (match the time with Created).',
       'A token works only from the hub\'s internal network (see Access).',
       'No administrator can sign in and no admin token is at hand? Start the hub once with `--svcmon.new-admin-token=true`: it prints a new one, once, in its console or service log.',
       '`svcmon` is one program with two jobs: the agent on a monitored server, and the command line anywhere (see The svcmon program).',
@@ -409,7 +410,7 @@ export const FIELD_HELP = {
   },
   'token.name': {
     label: 'Token name',
-    text: 'Who and what will use the token, for example "Sam, ops laptop" or "backup script": 1 to 100 characters, any will do. The list shows it, so you know which one to revoke. A token keeps working after the person who made it leaves, so the name is how you find theirs.',
+    text: 'Who and what will use the token, for example "Sam, ops laptop" or "backup script": 1 to 100 characters, any will do. The list shows it, so you know which one to revoke. The token acts for you: it stops if your account is disabled and goes if it is deleted.',
   },
   'token.scope': {
     label: 'Access',

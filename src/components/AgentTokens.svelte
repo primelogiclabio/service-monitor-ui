@@ -4,7 +4,7 @@
   import { status } from '../lib/status.svelte.js';
   import { notify } from '../lib/notify.svelte.js';
   import { ago, fmtDateTime } from '../lib/format.js';
-  import { MADE_BY_NOT_RECORDED, groupTokens, madeByLabel, serverNamesFrom, serverSeenFrom } from '../lib/settings.js';
+  import { MADE_BY_NOT_RECORDED, groupTokens, madeByLabel, serverNamesFrom, serverSeenFrom, tokenLimit } from '../lib/settings.js';
   import ConfirmDialog from './ConfirmDialog.svelte';
 
   let tokens = $state([]);
@@ -94,8 +94,9 @@
         <thead><tr><th>Label</th><th class="hide-sm">Made by</th><th class="hide-sm">Created</th><th>Expires</th><th></th></tr></thead>
         <tbody>
           {#each groups.enroll as t (t.id)}
+            {@const limit = tokenLimit(t)}
             <tr>
-              <td>{t.name}</td>
+              <td>{t.name}{#if limit}<span class="source-tag" title={limit.note}>{limit.tag}</span>{/if}</td>
               <td class="hide-sm" title={t.createdByKind ? null : MADE_BY_NOT_RECORDED}>{madeByLabel(t)}</td>
               <td class="hide-sm">{fmtDateTime(t.createdAt)}</td>
               <td>{t.expiresAt ? fmtDateTime(t.expiresAt) : '—'}</td>

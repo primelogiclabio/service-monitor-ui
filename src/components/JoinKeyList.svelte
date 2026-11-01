@@ -2,7 +2,7 @@
   import { getApi } from '../lib/auth.svelte.js';
   import { notify } from '../lib/notify.svelte.js';
   import { fmtDateTime } from '../lib/format.js';
-  import { MADE_BY_NOT_RECORDED, madeByLabel } from '../lib/settings.js';
+  import { MADE_BY_NOT_RECORDED, madeByLabel, tokenLimit } from '../lib/settings.js';
   import ConfirmDialog from './ConfirmDialog.svelte';
 
   /** The hub's join keys with Revoke. Reloads whenever `version` changes; reports the keys through `onloaded`. */
@@ -66,8 +66,9 @@
       </thead>
       <tbody>
         {#each keys as k (k.id)}
+          {@const limit = tokenLimit(k)}
           <tr>
-            <td>{k.name}</td>
+            <td>{k.name}{#if limit}<span class="source-tag" title={limit.note}>{limit.tag}</span>{/if}</td>
             <td>{k.cluster ?? 'any'}</td>
             <td class="num">{k.useCount ?? 0}</td>
             <td class="hide-sm">{k.usedAt ? fmtDateTime(k.usedAt) : '—'}</td>

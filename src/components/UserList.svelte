@@ -4,10 +4,13 @@
   import { notify } from '../lib/notify.svelte.js';
   import { fmtDateTime } from '../lib/format.js';
   import { ROLES, roleLabel, userAction, userSignIn, userStatus, usernameProblem } from '../lib/account.js';
+  import { ownedTokens } from '../lib/settings.js';
   import ConfirmDialog from './ConfirmDialog.svelte';
   import Tip from './Tip.svelte';
 
   let users = $state([]);
+  // The hub's tokens, so a dialog can say which act for the user it is about.
+  let tokens = $state([]);
   let loaded = $state(false);
   let error = $state('');
 
@@ -20,11 +23,16 @@
   let issued = $state(null);
   // The action waiting for its confirmation: { kind, user, role }.
   let pending = $state(null);
-  const dialog = $derived(pending ? userAction(pending.kind, pending.user, pending.role) : null);
+  const dialog = $derived(
+    pending ? userAction(pending.kind, pending.user, pending.role, ownedTokens(tokens, pending.user.id)) : null,
+  );
 
   async function load() {
     try {
-      users = (await getApi().users()).sort((a, b) => a.username.localeCompare(b.username));
+      // Without the token list the dialogs only leave out which tokens a change touches.
+      const [list, all] = await Promise.all([getApi().users(), getApi().tokens().catch(() => [])]);
+      users = list.sort((a, b) => a.username.localeCompare(b.username));
+      tokens = all;
       error = '';
     } catch (e) {
       error = e.message;

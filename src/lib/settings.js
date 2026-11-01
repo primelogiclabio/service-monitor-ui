@@ -55,6 +55,30 @@ export function madeByLabel(t) {
   return whoLabel({ actor: t.createdBy, actorKind: t.createdByKind });
 }
 
+/**
+ * What the account of the user a token acts for does to it now (the hub's `limit`), as a tag and its tooltip, or null
+ * when it works fully. A join key or one-time token is suspended while its user is read-only too: they cannot add
+ * servers.
+ */
+export function tokenLimit(t) {
+  if (t?.limit === 'suspended') {
+    return { tag: 'Suspended', note: 'Stopped while the user it acts for is disabled (or read-only, for a key that adds servers)' };
+  }
+  if (t?.limit === 'read_only') return { tag: 'Read only for now', note: 'Can only read while the user it acts for is read-only' };
+  return null;
+}
+
+/**
+ * The tokens acting for this user (the hub's `ownerId`) that could still be used: what deleting, disabling or demoting
+ * them does something to. Expired ones and one-time tokens that have registered their server are left out; agents'
+ * credentials act for nobody.
+ */
+export function ownedTokens(tokens, userId, now = Date.now()) {
+  return (tokens ?? []).filter(
+    (t) => t.ownerId && t.ownerId === userId && !(t.expiresAt && t.expiresAt < now) && !(t.scope === 'ENROLL' && t.usedAt),
+  );
+}
+
 const AGENT_PREFIX = 'agent:';
 
 /**
