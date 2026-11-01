@@ -5,6 +5,7 @@ import {
   SETTINGS_SECTIONS,
   TOKEN_NAME_MAX,
   groupTokens,
+  madeByLabel,
   pickSection,
   sectionsFor,
   serverNamesFrom,
@@ -35,6 +36,22 @@ describe('the sections of Settings', () => {
     expect(pickSection('users', false)).toBe('account');
     expect(pickSection(undefined, true)).toBe('account');
     expect(pickSection('nonsense', true)).toBe('account');
+  });
+});
+
+describe('who made a token', () => {
+  it('reads like Activity names the same person or credential', () => {
+    const by = (createdBy, createdByKind) => madeByLabel(token('t', 'READ', { createdBy, createdByKind }));
+    expect(by('alice', 'user')).toBe('alice');
+    expect(by('ops laptop', 'token')).toBe('API token “ops laptop”');
+    expect(by('fleet', 'join_key')).toBe('Join key “fleet”');
+    expect(by('web-token', 'enrollment_token')).toBe('Enrollment token “web-token”');
+    expect(by('hub', 'hub')).toBe('The hub, at start-up');
+  });
+
+  it('is a dash for a token made before the hub recorded it', () => {
+    expect(madeByLabel(token('old', 'READ'))).toBe('—');
+    expect(madeByLabel(undefined)).toBe('—');
   });
 });
 

@@ -4,7 +4,7 @@
   import { status } from '../lib/status.svelte.js';
   import { notify } from '../lib/notify.svelte.js';
   import { ago, fmtDateTime } from '../lib/format.js';
-  import { groupTokens, serverNamesFrom, serverSeenFrom } from '../lib/settings.js';
+  import { MADE_BY_NOT_RECORDED, groupTokens, madeByLabel, serverNamesFrom, serverSeenFrom } from '../lib/settings.js';
   import ConfirmDialog from './ConfirmDialog.svelte';
 
   let tokens = $state([]);
@@ -60,11 +60,12 @@
   {:else}
     <div class="table-wrap">
       <table class="data">
-        <thead><tr><th>Server</th><th class="hide-sm">Registered</th><th>Last report</th><th></th></tr></thead>
+        <thead><tr><th>Server</th><th class="hide-sm" title="The join key or one-time token the agent registered with">Joined with</th><th class="hide-sm">Registered</th><th>Last report</th><th></th></tr></thead>
         <tbody>
           {#each groups.agents as t (t.id)}
             <tr>
               <td>{t.server}</td>
+              <td class="hide-sm" title={t.createdByKind ? null : MADE_BY_NOT_RECORDED}>{madeByLabel(t)}</td>
               <td class="hide-sm">{fmtDateTime(t.createdAt)}</td>
               <td title={t.lastSeen ? fmtDateTime(t.lastSeen) : ''}>{t.lastSeen ? ago(t.lastSeen) : '—'}</td>
               <td class="num">
@@ -90,11 +91,12 @@
   {:else if !error}
     <div class="table-wrap">
       <table class="data">
-        <thead><tr><th>Label</th><th class="hide-sm">Created</th><th>Expires</th><th></th></tr></thead>
+        <thead><tr><th>Label</th><th class="hide-sm">Made by</th><th class="hide-sm">Created</th><th>Expires</th><th></th></tr></thead>
         <tbody>
           {#each groups.enroll as t (t.id)}
             <tr>
               <td>{t.name}</td>
+              <td class="hide-sm" title={t.createdByKind ? null : MADE_BY_NOT_RECORDED}>{madeByLabel(t)}</td>
               <td class="hide-sm">{fmtDateTime(t.createdAt)}</td>
               <td>{t.expiresAt ? fmtDateTime(t.expiresAt) : '—'}</td>
               <td class="num">

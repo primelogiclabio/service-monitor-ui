@@ -3,7 +3,7 @@
   import { getApi } from '../lib/auth.svelte.js';
   import { notify } from '../lib/notify.svelte.js';
   import { fmtDateTime, scopeLabel } from '../lib/format.js';
-  import { API_SCOPES, TOKEN_NAME_MAX, groupTokens, tokenNameProblem } from '../lib/settings.js';
+  import { API_SCOPES, MADE_BY_NOT_RECORDED, TOKEN_NAME_MAX, groupTokens, madeByLabel, tokenNameProblem } from '../lib/settings.js';
   import ConfirmDialog from './ConfirmDialog.svelte';
   import Tip from './Tip.svelte';
 
@@ -133,13 +133,14 @@
     <div class="table-wrap">
       <table class="data">
         <thead>
-          <tr><th>Name</th><th>Access</th><th class="hide-sm">Created</th><th class="hide-sm">Expires</th><th></th></tr>
+          <tr><th>Name</th><th>Access</th><th class="hide-sm">Made by</th><th class="hide-sm">Created</th><th class="hide-sm">Expires</th><th></th></tr>
         </thead>
         <tbody>
           {#each apiTokens as t (t.id)}
             <tr>
               <td>{t.name}</td>
               <td>{scopeLabel(t.scope)}</td>
+              <td class="hide-sm" title={t.createdByKind ? null : MADE_BY_NOT_RECORDED}>{madeByLabel(t)}</td>
               <td class="hide-sm">{fmtDateTime(t.createdAt)}</td>
               <td class="hide-sm">{t.expiresAt ? fmtDateTime(t.expiresAt) : '—'}</td>
               <td class="num">

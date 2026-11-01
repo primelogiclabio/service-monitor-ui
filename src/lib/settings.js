@@ -1,5 +1,7 @@
 // What the Settings page shows: its sections by role, and the hub's token list (GET /tokens) sorted into them.
 
+import { whoLabel } from './activity.js';
+
 /**
  * In page order. `admin` sections are only for administrators; the hub refuses the rest anyway. `help` is the
  * section's topic in help.js, shown by the page's Help button.
@@ -36,6 +38,20 @@ export const TOKEN_NAME_MAX = 100;
 /** Why the hub would refuse this (trimmed) token name, or '' when it would not. */
 export function tokenNameProblem(name) {
   return name && name.length <= TOKEN_NAME_MAX ? '' : `A token name is 1 to ${TOKEN_NAME_MAX} characters`;
+}
+
+/** The tooltip on a token whose maker the hub did not record: it was made before the hub kept that. */
+export const MADE_BY_NOT_RECORDED = 'Not recorded: made before the hub kept who made each token';
+
+/**
+ * Who made a token (the hub's createdBy and createdByKind), in the words Activity uses for the same person or
+ * credential, so the two pages read alike. An agent's credential was made by the join key or one-time token it joined
+ * with. '—' for a token made before the hub recorded it.
+ */
+export function madeByLabel(t) {
+  if (!t?.createdByKind) return '—';
+  if (t.createdByKind === 'hub') return 'The hub, at start-up';
+  return whoLabel({ actor: t.createdBy, actorKind: t.createdByKind });
 }
 
 const AGENT_PREFIX = 'agent:';

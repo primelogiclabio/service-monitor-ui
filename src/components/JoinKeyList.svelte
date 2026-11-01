@@ -2,6 +2,7 @@
   import { getApi } from '../lib/auth.svelte.js';
   import { notify } from '../lib/notify.svelte.js';
   import { fmtDateTime } from '../lib/format.js';
+  import { MADE_BY_NOT_RECORDED, madeByLabel } from '../lib/settings.js';
   import ConfirmDialog from './ConfirmDialog.svelte';
 
   /** The hub's join keys with Revoke. Reloads whenever `version` changes; reports the keys through `onloaded`. */
@@ -58,6 +59,7 @@
           <th title="Servers it registers are put in this cluster">Cluster</th>
           <th class="num" title="How many servers it has registered">Servers</th>
           <th class="hide-sm">Last used</th>
+          <th class="hide-sm">Made by</th>
           <th class="hide-sm">Stops working</th>
           <th></th>
         </tr>
@@ -69,6 +71,7 @@
             <td>{k.cluster ?? 'any'}</td>
             <td class="num">{k.useCount ?? 0}</td>
             <td class="hide-sm">{k.usedAt ? fmtDateTime(k.usedAt) : '—'}</td>
+            <td class="hide-sm" title={k.createdByKind ? null : MADE_BY_NOT_RECORDED}>{madeByLabel(k)}</td>
             <td class="hide-sm">{k.expiresAt ? fmtDateTime(k.expiresAt) : 'when revoked'}</td>
             <td class="num">
               <button
