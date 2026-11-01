@@ -3,7 +3,7 @@
   import { getApi } from '../lib/auth.svelte.js';
   import { notify } from '../lib/notify.svelte.js';
   import { fmtDateTime, scopeLabel } from '../lib/format.js';
-  import { API_SCOPES, MADE_BY_NOT_RECORDED, TOKEN_NAME_MAX, groupTokens, madeByLabel, tokenNameProblem } from '../lib/settings.js';
+  import { API_SCOPES, MADE_BY_NOT_RECORDED, TOKEN_NAME_MAX, groupTokens, madeByLabel, tokenLimit, tokenNameProblem } from '../lib/settings.js';
   import ConfirmDialog from './ConfirmDialog.svelte';
   import Tip from './Tip.svelte';
 
@@ -137,8 +137,9 @@
         </thead>
         <tbody>
           {#each apiTokens as t (t.id)}
+            {@const limit = tokenLimit(t)}
             <tr>
-              <td>{t.name}</td>
+              <td>{t.name}{#if limit}<span class="source-tag" title={limit.note}>{limit.tag}</span>{/if}</td>
               <td>{scopeLabel(t.scope)}</td>
               <td class="hide-sm" title={t.createdByKind ? null : MADE_BY_NOT_RECORDED}>{madeByLabel(t)}</td>
               <td class="hide-sm">{fmtDateTime(t.createdAt)}</td>

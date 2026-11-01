@@ -6,10 +6,12 @@ import {
   TOKEN_NAME_MAX,
   groupTokens,
   madeByLabel,
+  ownedTokens,
   pickSection,
   sectionsFor,
   serverNamesFrom,
   serverSeenFrom,
+  tokenLimit,
   tokenNameProblem,
 } from '../src/lib/settings.js';
 import { FIELD_HELP, HELP } from '../src/lib/help.js';
@@ -54,6 +56,31 @@ describe('who made a token', () => {
   it('is a dash for a token made before the hub recorded it', () => {
     expect(madeByLabel(token('old', 'READ'))).toBe('—');
     expect(madeByLabel(undefined)).toBe('—');
+  });
+});
+
+describe('the user a token acts for', () => {
+  it('tags a token their account stops or limits, and no other', () => {
+    expect(tokenLimit(token('t', 'ADMIN', { limit: 'suspended' }))).toMatchObject({ tag: 'Suspended' });
+    expect(tokenLimit(token('t', 'ADMIN', { limit: 'read_only' }))).toMatchObject({ tag: 'Read only for now' });
+    expect(tokenLimit(token('t', 'ADMIN', { ownerId: 'u1' }))).toBeNull();
+    expect(tokenLimit(undefined)).toBeNull();
+  });
+
+  it('lists the tokens a change to their account touches: theirs that could still be used', () => {
+    const tokens = [
+      token('cli', 'ADMIN', { ownerId: 'u1' }),
+      token('key', 'JOIN', { ownerId: 'u1' }),
+      token('waiting', 'ENROLL', { ownerId: 'u1', expiresAt: NOW + HOUR }),
+      token('used', 'ENROLL', { ownerId: 'u1', expiresAt: NOW + HOUR, usedAt: NOW - 1 }),
+      token('expired', 'JOIN', { ownerId: 'u1', expiresAt: NOW - 1 }),
+      token('hub-ci', 'READ'),
+      token('theirs', 'READ', { ownerId: 'u2' }),
+      token('agent:web01', 'AGENT', { serverId: 's1' }),
+    ];
+    expect(ownedTokens(tokens, 'u1', NOW).map((t) => t.name)).toEqual(['cli', 'key', 'waiting']);
+    expect(ownedTokens(tokens, undefined, NOW)).toEqual([]);
+    expect(ownedTokens(undefined, 'u1', NOW)).toEqual([]);
   });
 });
 
@@ -131,12 +158,16 @@ describe('a new API token', () => {
     expect(second).toContain('svcmon token create');
   });
 
-  it('is said to outlive the person who made it, wherever that person is managed', () => {
-    expect(HELP.apiTokens.notes.join(' ')).toContain('keeps working after the person who made it is disabled or deleted');
+  it('is said to follow the person who made it, wherever that person is managed', () => {
+    const api = [...HELP.apiTokens.fields.map((f) => f.text), ...HELP.apiTokens.notes].join(' ');
+    expect(api).toContain('acts for the person who made it');
+    expect(api).toContain('revoked when their account is deleted');
+    expect(api, 'and how to make one that does not').toContain('acts for nobody');
     const users = [...HELP.users.fields.map((f) => f.text), ...HELP.users.notes].join(' ');
-    expect(users).toContain('API tokens they made keep working');
-    expect(users).toContain('revoke the API tokens they made');
-    expect(FIELD_HELP['token.name'].text).toContain('after the person who made it leaves');
+    expect(users).toContain('The tokens they made stop working until then');
+    expect(users).toContain('The tokens they made are revoked with it');
+    expect(users).not.toContain('keep working');
+    expect(FIELD_HELP['token.name'].text).toContain('The token acts for you');
   });
 });
 

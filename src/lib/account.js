@@ -171,20 +171,55 @@ export function describeBrowser(userAgent) {
   return system ? `${browser} on ${system}` : browser;
 }
 
+const SHOWN_TOKENS = 3;
+
+/** Names a user's tokens for a dialog: the first few, saying which are join keys or one-time tokens, then how many more. */
+export function tokenNames(owned) {
+  const named = owned.slice(0, SHOWN_TOKENS).map((t) =>
+    t.scope === 'JOIN' ? `join key “${t.name}”` : t.scope === 'ENROLL' ? `one-time token “${t.name}”` : `“${t.name}”`,
+  );
+  const more = owned.length - named.length;
+  if (more > 0) return `${named.join(', ')} and ${more} more`;
+  return named.length > 1 ? `${named.slice(0, -1).join(', ')} and ${named.at(-1)}` : named.join('');
+}
+
+/** What an action on a user does to the tokens that act for them; '' when they have none. */
+function tokensNote(kind, role, owned) {
+  if (!owned.length) return '';
+  const one = owned.length === 1;
+  const theirs = `${one ? 'The token that acts' : `The ${owned.length} tokens that act`} for them (${tokenNames(owned)})`;
+  switch (kind) {
+    case 'delete':
+      return ` ${theirs} ${one ? 'is' : 'are'} revoked with the account: make a replacement first if a script still needs ${one ? 'it' : 'one'}.`;
+    case 'disable':
+      return ` ${theirs} stop${one ? 's' : ''} working until then too.`;
+    case 'enable':
+      return ` ${theirs} work${one ? 's' : ''} again.`;
+    case 'role':
+      return role === 'ADMIN'
+        ? ` ${theirs} work${one ? 's' : ''} fully again.`
+        : ` ${theirs} can only read, and join keys and one-time tokens stop, until they are an administrator again.`;
+    default:
+      return '';
+  }
+}
+
 /**
  * The confirmation for an action on a user: `kind` is 'role' (to `role`), 'reset', 'disable', 'enable' or 'delete'.
- * Returns { title, message, confirmLabel, danger }.
+ * `owned` are the tokens that act for them and could still be used (settings.js ownedTokens), which the action
+ * revokes, stops or limits. Returns { title, message, confirmLabel, danger }.
  */
-export function userAction(kind, user, role) {
+export function userAction(kind, user, role, owned = []) {
   const name = `“${user.username}”`;
+  const note = tokensNote(kind, role, owned);
   switch (kind) {
     case 'role':
       return {
         title: 'Change role',
         message:
-          role === 'ADMIN'
+          (role === 'ADMIN'
             ? `Make ${name} an administrator, who can change everything, users included? Their sign-ins end so the new role applies at once.`
-            : `Make ${name} read-only, able to look at everything but change nothing? Their sign-ins end so the new role applies at once.`,
+            : `Make ${name} read-only, able to look at everything but change nothing? Their sign-ins end so the new role applies at once.`) + note,
         confirmLabel: role === 'ADMIN' ? 'Make administrator' : 'Make read-only',
         danger: false,
       };
@@ -198,23 +233,24 @@ export function userAction(kind, user, role) {
     case 'disable':
       return {
         title: 'Disable user',
-        message: `Disable ${name}? They are signed out and cannot sign in until the account is enabled again.`,
+        message: `Disable ${name}? They are signed out and cannot sign in until the account is enabled again.${note}`,
         confirmLabel: 'Disable',
         danger: true,
       };
     case 'enable':
       return {
         title: 'Enable user',
-        message: `Enable ${name}? They can sign in again with ${user.provider ? 'the identity provider' : 'their password'}.`,
+        message: `Enable ${name}? They can sign in again with ${user.provider ? 'the identity provider' : 'their password'}.${note}`,
         confirmLabel: 'Enable',
         danger: false,
       };
     case 'delete':
       return {
         title: 'Delete user',
-        message: user.provider
-          ? `Delete ${name}? They are signed out and the account is gone, but the next time they sign in with the identity provider (and still have a role there) a new one is made. Disable it instead to keep them out.`
-          : `Delete ${name}? They are signed out and the account is gone for good. Disable it instead to keep it.`,
+        message:
+          (user.provider
+            ? `Delete ${name}? They are signed out and the account is gone, but the next time they sign in with the identity provider (and still have a role there) a new one is made. Disable it instead to keep them out.`
+            : `Delete ${name}? They are signed out and the account is gone for good. Disable it instead to keep it.`) + note,
         confirmLabel: 'Delete',
         danger: true,
       };
