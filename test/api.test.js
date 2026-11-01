@@ -197,4 +197,21 @@ describe('createApi', () => {
       ['PUT', '/api/v1/me/password', '{"currentPassword":"a","newPassword":"b"}'],
     ]);
   });
+
+  it('manages alert channels at the hub paths', async () => {
+    const fetchImpl = vi.fn(async (url, init) => (init.method === 'DELETE' ? reply(204) : reply(200, {})));
+    const api = createApi({ fetchImpl });
+    await api.alertChannels();
+    await api.createAlertChannel({ name: 'ops', type: 'SLACK' });
+    await api.replaceAlertChannel('c/1', { name: 'ops' });
+    await api.testAlertChannel('c1');
+    await api.deleteAlertChannel('c1');
+    expect(fetchImpl.mock.calls.map(([url, init]) => [init.method, url, init.body])).toEqual([
+      ['GET', '/api/v1/alert-channels', undefined],
+      ['POST', '/api/v1/alert-channels', '{"name":"ops","type":"SLACK"}'],
+      ['PUT', '/api/v1/alert-channels/c%2F1', '{"name":"ops"}'],
+      ['POST', '/api/v1/alert-channels/c1/test', undefined],
+      ['DELETE', '/api/v1/alert-channels/c1', undefined],
+    ]);
+  });
 });

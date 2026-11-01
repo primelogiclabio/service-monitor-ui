@@ -19,9 +19,9 @@ const HOUR = 3_600_000;
 const token = (id, scope, extra = {}) => ({ id, name: id, scope, serverId: null, createdAt: NOW - HOUR, expiresAt: null, usedAt: null, ...extra });
 
 describe('the sections of Settings', () => {
-  it('are Account and Access for a read-only user, and all seven for an administrator', () => {
+  it('are Account and Access for a read-only user, and all eight for an administrator', () => {
     expect(sectionsFor(false).map((s) => s.key)).toEqual(['account', 'access']);
-    expect(sectionsFor(true).map((s) => s.key)).toEqual(['account', 'users', 'agents', 'api', 'activity', 'signin', 'access']);
+    expect(sectionsFor(true).map((s) => s.key)).toEqual(['account', 'users', 'agents', 'api', 'alerts', 'activity', 'signin', 'access']);
     expect(SETTINGS_SECTIONS.every((s) => s.label)).toBe(true);
   });
 
@@ -34,6 +34,8 @@ describe('the sections of Settings', () => {
   it('open the one the address asks for, if the role allows it', () => {
     expect(pickSection('users', true)).toBe('users');
     expect(pickSection('users', false)).toBe('account');
+    expect(pickSection('alerts', true)).toBe('alerts');
+    expect(pickSection('alerts', false)).toBe('account');
     expect(pickSection(undefined, true)).toBe('account');
     expect(pickSection('nonsense', true)).toBe('account');
   });

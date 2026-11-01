@@ -7,6 +7,7 @@
   import UserList from '../components/UserList.svelte';
   import AgentTokens from '../components/AgentTokens.svelte';
   import ApiTokens from '../components/ApiTokens.svelte';
+  import AlertChannels from '../components/AlertChannels.svelte';
   import AccessSettings from '../components/AccessSettings.svelte';
   import ActivityLog from '../components/ActivityLog.svelte';
   import ProviderSettings from '../components/ProviderSettings.svelte';
@@ -25,7 +26,7 @@
       <h1 style="font-size: 1.75rem">Settings</h1>
       <p class="secondary" style="margin-top: 4px">
         {auth.admin
-          ? 'Your account, the people who may sign in, the credentials of agents and scripts, who did what, how people sign in, and where the hub may be used from.'
+          ? 'Your account, the people who may sign in, the credentials of agents and scripts, where alerts go, who did what, how people sign in, and where the hub may be used from.'
           : 'Your account, where you are signed in, and where the hub may be used from.'}
       </p>
     </div>
@@ -44,6 +45,8 @@
     <AgentTokens />
   {:else if section === 'api'}
     <ApiTokens />
+  {:else if section === 'alerts'}
+    <AlertChannels />
   {:else if section === 'activity'}
     <ActivityLog />
   {:else if section === 'signin'}

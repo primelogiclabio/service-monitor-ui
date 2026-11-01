@@ -177,6 +177,29 @@ export const HELP = {
       '`svcmon` is one program with two jobs: the agent on a monitored server, and the command line anywhere (see The svcmon program).',
     ],
   },
+  alerts: {
+    title: 'Alerts',
+    summary:
+      'Where the hub sends a message when something changes status: Slack, Discord, email, or a webhook of your own. The hub sends them itself, so alerts keep coming with no browser open. Only administrators see this page.',
+    steps: [
+      'Click Add channel, choose the type, give it a name and say where to send. For Slack or Discord, make an incoming webhook in that channel\'s settings there and paste its URL.',
+      'Choose the statuses it sends on. Down, Warning and Up (the default) tell you about a problem and when it ends.',
+      'Click Send test. State shows Working once the message arrived, or Failing with the answer the hub got.',
+      'From a terminal, `svcmon alert add slack --name ops --url <webhook URL>` then `svcmon alert test ops` does the same.',
+    ],
+    fields: [
+      { name: 'What sends a message', text: 'A check changing status, once its Failures before down count is reached, and a server\'s agent going silent for longer than the hub allows, or reporting again.' },
+      { name: 'Slack, Discord', text: 'An incoming webhook URL from that service, which must be https.' },
+      { name: 'Webhook', text: 'The hub posts JSON (`event`, `kind`, `hub`, `time`, `subject`, `from`, `to` and `message`) to your URL, with any headers you add. With a signing secret it also sends `X-Svcmon-Signature: sha256=<HMAC-SHA256 of the body>`, so the receiver can tell the message is this hub\'s.' },
+      { name: 'Email', text: 'Sent through your SMTP server, as HTML with a plain-text part or as plain text only. STARTTLS by default, and the hub never falls back to clear text.' },
+      { name: 'State, Last delivered', text: 'Whether the latest message, a test included, arrived. Failing shows the error the hub got; Not sent yet means nothing has been sent since the channel was added.' },
+    ],
+    notes: [
+      'Webhook URLs, header values, the signing secret and the SMTP password are secrets: the hub shows them masked and never sends them back. When you edit a channel, leave one empty to keep it.',
+      'A failing delivery is retried a few times when the problem looks temporary. The hub keeps no list of the messages it sent; the receiver has them.',
+      'Disable a channel to pause it, for example during planned work, and keep its settings.',
+    ],
+  },
   activity: {
     title: 'Activity',
     summary: 'The hub\'s record of who signed in and who changed what, newest first. Only administrators see it.',
@@ -231,7 +254,7 @@ export const HELP = {
     fields: [
       { name: 'Agent commands', text: '`svcmon agent ...`, run on the server itself: `install`, `enroll`, `uninstall`, `services`, `containers`, and `check add|rm|list` for the server\'s own `checks.json`. The agent uses its own credential from `agent.json`.' },
       { name: 'Hub commands', text: '`svcmon status`, `svcmon check ...`, `svcmon alert ...`, `svcmon token ...` and more, from any computer that can reach the hub. They need an API token, saved once with `svcmon login`.' },
-      { name: 'Alerts', text: 'Where the hub sends status changes (email, Slack, Discord or a webhook) is set up with `svcmon alert add`; `svcmon alert test` sends a test message. The dashboard has no alerts page yet.' },
+      { name: 'Alerts', text: 'Where the hub sends status changes (email, Slack, Discord or a webhook) is set up with `svcmon alert add`; `svcmon alert test` sends a test message. Settings, Alerts does the same in the dashboard.' },
     ],
     notes: ['`svcmon help` lists every command.'],
   },
@@ -258,6 +281,7 @@ export const HELP_SECTIONS = [
   'users',
   'agents',
   'apiTokens',
+  'alerts',
   'activity',
   'signIn',
   'access',
@@ -394,6 +418,66 @@ export const FIELD_HELP = {
   'server.cluster': {
     label: 'Cluster',
     text: 'A group name such as prod or staging; the Dashboard groups servers by it. Leave empty for none.',
+  },
+  'alert.type': {
+    label: 'Type',
+    text: 'Where the message goes. Slack and Discord need an incoming webhook URL from that service; Webhook posts JSON to a URL of yours; Email goes through an SMTP server. It cannot be changed later: add a new channel instead.',
+  },
+  'alert.name': {
+    label: 'Name',
+    text: 'How the channel is listed here and named by `svcmon alert`, for example ops-slack: 1 to 100 characters, and no two channels share one.',
+  },
+  'alert.statuses': {
+    label: 'Sends on',
+    text: 'A check or server changing to one of these sends a message. Down, Warning and Up are the default; untick Up and you hear about problems but not when they end. Unknown is a check with no result or one that could not tell.',
+  },
+  'alert.url': {
+    label: 'URL',
+    text: 'Where the hub posts. Slack: an incoming webhook (https://hooks.slack.com/services/…). Discord: a channel webhook (https://discord.com/api/webhooks/…). Webhook: your own receiver, http or https. It is a secret, shown masked after saving.',
+  },
+  'alert.signingSecret': {
+    label: 'Signing secret',
+    text: 'If set, the hub signs every message body with HMAC-SHA256 and sends `X-Svcmon-Signature: sha256=…`, so your receiver can check the message came from this hub. Up to 200 characters, shown masked after saving.',
+  },
+  'alert.headers': {
+    label: 'Headers',
+    text: 'Extra HTTP headers on every message, such as `Authorization` for a receiver that wants a token. Up to 10. Values are secrets, shown masked; Host, Content-Type and the other headers the hub sets itself are not allowed.',
+  },
+  'alert.smtpHost': {
+    label: 'SMTP server',
+    text: 'The mail server the hub sends through, such as smtp.example.com or a relay on the internal network.',
+  },
+  'alert.smtpPort': {
+    label: 'Port',
+    text: 'Empty means 587, the usual port for STARTTLS. SSL/TLS usually uses 465.',
+  },
+  'alert.security': {
+    label: 'Security',
+    text: 'STARTTLS (the default) and SSL/TLS encrypt the connection, and the hub will not send if the server cannot. None is for a trusted relay on the internal network only.',
+  },
+  'alert.username': {
+    label: 'SMTP user name',
+    text: 'The account the hub signs in to the mail server with. Leave empty for a relay that takes mail without signing in.',
+  },
+  'alert.password': {
+    label: 'SMTP password',
+    text: "The mail account's password, if it has one. It is a secret: shown masked, and when you edit the channel an empty field keeps the saved one.",
+  },
+  'alert.from': {
+    label: 'From',
+    text: 'The sender address on every message, such as svcmon@example.com. Many mail servers only accept addresses they own.',
+  },
+  'alert.to': {
+    label: 'To',
+    text: 'Who gets the messages: 1 to 20 addresses, separated by commas. An email-to-SMS gateway address works too.',
+  },
+  'alert.format': {
+    label: 'Format',
+    text: "HTML shows a coloured status band, the details and, when the hub knows its public address, a button to the server's page, with a plain-text part for other mail programs. Plain text only is for pagers and email-to-SMS gateways.",
+  },
+  'alert.enabled': {
+    label: 'Enabled',
+    text: 'A disabled channel keeps its settings but is sent nothing. Send test still works, to try it before switching it back on.',
   },
 };
 
