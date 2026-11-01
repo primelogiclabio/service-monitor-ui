@@ -88,7 +88,7 @@ export const HELP = {
       'The timing defaults suit most checks. Press Add check; its status appears within one interval.',
     ],
     fields: [
-      { name: 'HTTP', text: 'Opens a URL. UP when the answer is in the accepted status codes (200-299 unless you change it) and the body contains the text you set, if any. Warns before the certificate expires. "Accept any TLS certificate" is for internal sites with a self-signed one.' },
+      { name: 'HTTP', text: 'Opens a URL. UP when the answer is in the accepted status codes (200-299 unless you change it) and the body contains the text you set, if any. Warns before the certificate expires. "Accept any TLS certificate" is for internal sites with a self-signed one. It does not sign in: a URL with a user name or password (user:password@) is refused. For a page behind a login, add 401 to the accepted status codes to see that it answers.' },
       { name: 'TCP', text: 'Opens a connection to `host:port`, for example `db01:5432`. UP when it connects.' },
       { name: 'PING', text: 'Sends a ping to a host name or address. UP when it answers.' },
       { name: 'SERVICE', text: 'A Windows service, systemd unit or launchd label, by its service name. List what exists on the server with `svcmon agent services`.' },
@@ -316,7 +316,7 @@ export const FIELD_HELP = {
   },
   'check.expectStatus': {
     label: 'Accepted status codes',
-    text: 'The HTTP status codes that count as UP, for example `200-299` or `200,301-302`. Empty means 200-299.',
+    text: 'The HTTP status codes that count as UP, for example `200-299` or `200,301-302`. Empty means 200-299. Checks do not sign in, so for a page behind a login add `401`: UP then means the site answers.',
   },
   'check.keyword': {
     label: 'Body must contain',
