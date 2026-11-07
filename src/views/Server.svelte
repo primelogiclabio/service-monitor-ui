@@ -3,6 +3,7 @@
   import { auth, getApi } from '../lib/auth.svelte.js';
   import { notify } from '../lib/notify.svelte.js';
   import { RANGES, ago, fmtDateTime, plural } from '../lib/format.js';
+  import { LENGTHS, MAX_REASON, emptyForm, formFromWindow, maintenanceRequest, windowSummary } from '../lib/maintenance.js';
   import StatusBadge from '../components/StatusBadge.svelte';
   import CheckTable from '../components/CheckTable.svelte';
   import CheckForm from '../components/CheckForm.svelte';
@@ -21,6 +22,8 @@
   let formError = $state('');
   let newName = $state('');
   let newCluster = $state('');
+  let maintaining = $state(false);
+  let mform = $state(emptyForm());
 
   const found = $derived.by(() => {
     if (!status.data) return null;
@@ -71,6 +74,46 @@
     }
   }
 
+  function startMaintenance() {
+    mform = server.maintenance ? formFromWindow(server.maintenance) : emptyForm();
+    formError = '';
+    maintaining = true;
+  }
+
+  async function saveMaintenance(e) {
+    e.preventDefault();
+    const { body, error } = maintenanceRequest(mform);
+    if (error) {
+      formError = error;
+      return;
+    }
+    busy = true;
+    formError = '';
+    try {
+      await getApi().openMaintenance(id, body);
+      maintaining = false;
+      notify(`Alerts for ${server.name} are held back`, 'success');
+      await refresh();
+    } catch (err) {
+      formError = err.message;
+    } finally {
+      busy = false;
+    }
+  }
+
+  async function endMaintenance() {
+    busy = true;
+    try {
+      await getApi().endMaintenance(id);
+      notify(`Maintenance of ${server.name} ended`, 'success');
+      await refresh();
+    } catch (e) {
+      notify(e.message, 'error');
+    } finally {
+      busy = false;
+    }
+  }
+
   async function removeServer() {
     try {
       await getApi().deleteServer(id);
@@ -112,12 +155,25 @@
         {#if auth.admin}
           <div class="server-actions">
             <button class="btn" type="button" title="Add a check for this server" onclick={() => { formError = ''; adding = true; }}>Add check</button>
+            <button class="btn" type="button" title="Hold back this server's alerts while it is restarted" onclick={startMaintenance}>{server.maintenance ? 'Extend maintenance' : 'Maintenance'}</button>
             <button class="btn" type="button" title="Change the server's name or move it to another cluster" onclick={startRename}>Rename or move</button>
             <button class="btn danger" type="button" title="Remove the server from the hub, with its checks and history, and revoke its agent's credential. The agent keeps running on the machine until you uninstall it." onclick={() => (deleting = true)}>Remove</button>
           </div>
         {/if}
       </div>
     </div>
+
+    {#if server.maintenance}
+      <div class="banner warn maintenance" role="status">
+        <span>
+          <strong>Maintenance.</strong> {windowSummary(server.maintenance)}
+          {#if server.maintenance.reason}<span class="secondary">Reason: {server.maintenance.reason}</span>{/if}
+        </span>
+        {#if auth.admin}
+          <button class="btn" type="button" title="Let its alerts out again now; anything not back to how it was alerts once" onclick={endMaintenance} disabled={busy}>End now</button>
+        {/if}
+      </div>
+    {/if}
 
     {#if !server.agentOnline}
       <div class="banner error" role="status">
@@ -178,6 +234,45 @@
         <div class="actions">
           <button class="btn" type="button" onclick={() => (renaming = false)} disabled={busy}>Cancel</button>
           <button class="btn primary" type="submit" disabled={busy}>Save</button>
+        </div>
+      </form>
+    </Modal>
+  {/if}
+
+  {#if maintaining}
+    <Modal title="{server.maintenance ? 'Extend maintenance of' : 'Maintenance for'} {server.name}" onclose={() => (maintaining = false)}>
+      <form class="stack" onsubmit={saveMaintenance}>
+        <p class="small secondary">
+          No alert about this server, its agent or its checks is sent while the window is open. When it ends, anything
+          not back to how it was alerts once. The dashboard still shows what happens.
+        </p>
+        <div class="field">
+          <div class="label-row"><span class="label" id="mt-length">How long, at most</span><Tip field="maintenance.length" /></div>
+          <div class="segmented" role="group" aria-labelledby="mt-length">
+            {#each LENGTHS as l (l.minutes)}
+              <button type="button" aria-pressed={mform.minutes === l.minutes} onclick={() => (mform.minutes = l.minutes)}>{l.label}</button>
+            {/each}
+            <button type="button" aria-pressed={mform.minutes === 'custom'} onclick={() => (mform.minutes = 'custom')}>Other</button>
+          </div>
+          {#if mform.minutes === 'custom'}
+            <label class="sr-only" for="mt-custom">Minutes</label>
+            <input id="mt-custom" type="number" min="1" max="1440" step="1" placeholder="Minutes, up to 1440" bind:value={mform.custom} />
+          {/if}
+          {#if server.maintenance}<span class="hint">Extending only ever moves the end later.</span>{/if}
+        </div>
+        <div class="field">
+          <label for="mt-reason">Reason (optional)</label>
+          <input id="mt-reason" type="text" maxlength={MAX_REASON} placeholder="Kernel update" bind:value={mform.reason} />
+          <span class="hint">Shown here and in <code>svcmon maintenance list</code>; never sent in alerts.</span>
+        </div>
+        <div class="label-row">
+          <label class="check"><input type="checkbox" bind:checked={mform.untilBack} /> End early once everything is back</label>
+          <Tip field="maintenance.untilBack" />
+        </div>
+        {#if formError}<p class="form-error" role="alert">{formError}</p>{/if}
+        <div class="actions">
+          <button class="btn" type="button" onclick={() => (maintaining = false)} disabled={busy}>Cancel</button>
+          <button class="btn primary" type="submit" disabled={busy}>{server.maintenance ? 'Extend' : 'Start maintenance'}</button>
         </div>
       </form>
     </Modal>

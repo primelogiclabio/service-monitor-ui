@@ -3,6 +3,7 @@
   import { auth } from '../lib/auth.svelte.js';
   import { ago, cleanMessage, headline, plural } from '../lib/format.js';
   import { serverHref } from '../lib/router.js';
+  import { windowTag } from '../lib/maintenance.js';
   import StatusBadge from '../components/StatusBadge.svelte';
   import CheckTable from '../components/CheckTable.svelte';
   import WithHelp from '../components/WithHelp.svelte';
@@ -120,6 +121,10 @@
                 <div class="small muted">
                   {s.os ?? 'Unknown OS'} · {s.agentOnline ? `seen ${ago(s.lastSeen)}` : `agent silent since ${ago(s.lastSeen)}`}
                 </div>
+                {#if s.maintenance}
+                  {@const tag = windowTag(s.maintenance)}
+                  <div><span class="maint-tag" title={tag.title}>{tag.label}</span> <span class="small secondary">{tag.title}</span></div>
+                {/if}
                 {#if problems(s).length}
                   <ul>
                     {#each problems(s) as p (p.id)}

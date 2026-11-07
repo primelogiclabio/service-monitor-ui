@@ -32,12 +32,14 @@ export const HELP = {
       'One server and its checks: its cluster, operating system, agent version, and when its agent last reported. Select a check\'s name to see its history and its buttons (see Monitors).',
     fields: [
       { name: 'Add check', text: 'A check for this server, with the server already chosen (see Adding a check).' },
+      { name: 'Maintenance', text: 'Before a planned restart: no alert about this server, its agent or its checks is sent until everything is back or the time is up, whichever comes first. When it ends, anything not back to how it was alerts once. On the server itself, `svcmon agent maintenance 20m` does the same. End now lets the alerts out at once.' },
       { name: 'Rename or move', text: 'Changes the name the hub shows and the cluster the server is grouped under. The agent and its checks carry on as before.' },
       { name: 'Remove', text: 'Deletes the server with its checks and history, and revokes its agent\'s credential. The agent stays installed on the machine until you uninstall it there with `svcmon agent uninstall`.' },
       { name: 'Time range for charts', text: 'How far back every chart on the page goes, from 1 hour to 7 days.' },
     ],
     notes: [
       'A red banner means the agent has gone quiet: check that the `svcmon-agent` service is running on the server and can reach the hub.',
+      'A yellow Maintenance banner means the server\'s alerts are held back for a while; the page still shows what is happening.',
       'Only the checks someone adds are run. On the server, `svcmon agent services` and `svcmon agent containers` list what could be checked.',
       'Read-only users see the same page without the buttons.',
     ],
@@ -419,6 +421,14 @@ export const FIELD_HELP = {
   'server.cluster': {
     label: 'Cluster',
     text: 'A group name such as prod or staging; the Dashboard groups servers by it. Leave empty for none.',
+  },
+  'maintenance.length': {
+    label: 'How long',
+    text: 'The most the alerts stay held back, up to a day. Give the restart some room: anything still not back when the time is up alerts then.',
+  },
+  'maintenance.untilBack': {
+    label: 'End early',
+    text: 'Ends the window once the server has gone down and is back: its agent reporting again and every check run since and passing. Untick it for work with several restarts, so the window stays open for the whole time.',
   },
   'alert.type': {
     label: 'Type',

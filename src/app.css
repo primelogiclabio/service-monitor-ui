@@ -266,6 +266,27 @@ footer.site {
   border-left-color: var(--critical);
   background: var(--wash-critical);
 }
+/* A server in maintenance: what is held back, with End now on the right. */
+.banner.maintenance {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+.banner.maintenance .secondary {
+  margin-left: 4px;
+}
+/* The same, as a tag on a server's card. */
+.maint-tag {
+  display: inline-block;
+  padding: 0 6px;
+  border: 1px solid var(--warning);
+  border-radius: 999px;
+  background: var(--wash-warning);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
 
 /* ---------- controls ---------- */
 
